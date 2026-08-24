@@ -1,7 +1,15 @@
+import { WINDOW_MS } from './constants';
 import { msg } from './i18n';
-import type { ClaudeUsage, CodexUsage, ModelUsage } from './types';
+import type { ClaudeUsage, CodexUsage, ModelUsage, UsageLimit } from './types';
 
 export type ProviderUsage = ClaudeUsage | CodexUsage;
+
+/**
+ * Claude's two provider windows are fixed at 5h and 7d, so snapshots written
+ * before the window length was stored can still be paced.
+ */
+const withWindow = (limit: UsageLimit, windowMs: number): UsageLimit =>
+  limit.windowMs === undefined ? { ...limit, windowMs } : limit;
 
 /**
  * Return the provider-level limits shown in the popup, overlay, and badge.
@@ -13,8 +21,16 @@ export type ProviderUsage = ClaudeUsage | CodexUsage;
 export const getUsageWindows = (usage: ProviderUsage): ModelUsage[] => {
   if ('plan' in usage) {
     return [
-      { id: 'session', label: msg('sessionLimit'), limit: usage.session },
-      { id: 'weekly', label: msg('weeklyLimit'), limit: usage.weekly },
+      {
+        id: 'session',
+        label: msg('sessionLimit'),
+        limit: withWindow(usage.session, WINDOW_MS.fiveHours),
+      },
+      {
+        id: 'weekly',
+        label: msg('weeklyLimit'),
+        limit: withWindow(usage.weekly, WINDOW_MS.sevenDays),
+      },
     ];
   }
 
@@ -24,10 +40,18 @@ export const getUsageWindows = (usage: ProviderUsage): ModelUsage[] => {
 
   const legacy: ModelUsage[] = [];
   if (usage.session) {
-    legacy.push({ id: 'legacy-session', label: msg('sessionLimit'), limit: usage.session });
+    legacy.push({
+      id: 'legacy-session',
+      label: msg('sessionLimit'),
+      limit: withWindow(usage.session, WINDOW_MS.fiveHours),
+    });
   }
   if (usage.weekly) {
-    legacy.push({ id: 'legacy-weekly', label: msg('weeklyLimit'), limit: usage.weekly });
+    legacy.push({
+      id: 'legacy-weekly',
+      label: msg('weeklyLimit'),
+      limit: withWindow(usage.weekly, WINDOW_MS.sevenDays),
+    });
   }
   return legacy;
 };

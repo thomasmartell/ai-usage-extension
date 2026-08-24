@@ -77,6 +77,18 @@
   "resetsLabel": {
     "message": "リセット $1"
   },
+  "paceElapsedLabel": {
+    "message": "$1% 経過"
+  },
+  "paceDeltaLabel": {
+    "message": "$1 pt"
+  },
+  "paceProjectionLabel": {
+    "message": "このペースでは: リセットの約$1前に上限"
+  },
+  "settingsLabel": {
+    "message": "設定"
+  },
   "nextResetLabel": {
     "message": "リセット $1"
   },

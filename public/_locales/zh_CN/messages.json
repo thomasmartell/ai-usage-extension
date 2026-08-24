@@ -77,6 +77,18 @@
   "resetsLabel": {
     "message": "$1 后重置"
   },
+  "paceElapsedLabel": {
+    "message": "已过 $1%"
+  },
+  "paceDeltaLabel": {
+    "message": "$1 点"
+  },
+  "paceProjectionLabel": {
+    "message": "按此速度：将在重置前约 $1 用完"
+  },
+  "settingsLabel": {
+    "message": "设置"
+  },
   "nextResetLabel": {
     "message": "$1 后重置"
   },

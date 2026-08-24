@@ -7,6 +7,8 @@ export interface UsageLimit {
   resetsAt: string | null;
   used?: number;
   limit?: number;
+  /** Length of the rolling window in ms, when the provider reports one. */
+  windowMs?: number;
 }
 
 export interface ModelUsage {

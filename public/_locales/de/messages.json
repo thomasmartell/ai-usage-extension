@@ -77,6 +77,18 @@
   "resetsLabel": {
     "message": "Reset $1"
   },
+  "paceElapsedLabel": {
+    "message": "$1% verstrichen"
+  },
+  "paceDeltaLabel": {
+    "message": "$1 Pkt."
+  },
+  "paceProjectionLabel": {
+    "message": "in diesem Tempo: Limit ~$1 vor dem Reset"
+  },
+  "settingsLabel": {
+    "message": "Einstellungen"
+  },
   "nextResetLabel": {
     "message": "Reset $1"
   },

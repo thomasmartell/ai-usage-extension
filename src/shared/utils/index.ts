@@ -25,6 +25,27 @@ export const getUsageTone = (value: number): UsageStatus => {
 };
 
 /**
+ * Human-readable span of time.
+ * Returns e.g. `3d 1h`, `2h 13m`, `45m`.
+ */
+export const formatDuration = (ms: number): string => {
+  const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}${msg('timeDayShort')} ${hours % 24}${msg('timeHourShort')}`;
+  }
+
+  if (hours > 0) {
+    return `${hours}${msg('timeHourShort')} ${minutes}${msg('timeMinuteShort')}`;
+  }
+
+  return `${minutes}${msg('timeMinuteShort')}`;
+};
+
+/**
  * Human-readable countdown to a reset timestamp.
  * Returns e.g. `2h 13m`, `45m`, `now`, or `unknown`.
  */
@@ -42,20 +63,7 @@ export const formatReset = (resetAt: string | null, now: number): string => {
     return msg('timeNow');
   }
 
-  const totalMinutes = Math.floor(diff / 60_000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours >= 24) {
-    const days = Math.floor(hours / 24);
-    return `${days}${msg('timeDayShort')} ${hours % 24}${msg('timeHourShort')}`;
-  }
-
-  if (hours > 0) {
-    return `${hours}${msg('timeHourShort')} ${minutes}${msg('timeMinuteShort')}`;
-  }
-
-  return `${minutes}${msg('timeMinuteShort')}`;
+  return formatDuration(diff);
 };
 
 /**

@@ -77,6 +77,18 @@
   "resetsLabel": {
     "message": "сброс $1"
   },
+  "paceElapsedLabel": {
+    "message": "прошло $1%"
+  },
+  "paceDeltaLabel": {
+    "message": "$1 п."
+  },
+  "paceProjectionLabel": {
+    "message": "при таком темпе: лимит ~$1 до сброса"
+  },
+  "settingsLabel": {
+    "message": "Настройки"
+  },
   "nextResetLabel": {
     "message": "сброс $1"
   },

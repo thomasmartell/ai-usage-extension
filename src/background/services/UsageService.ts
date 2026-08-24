@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../../shared/constants';
+import { STORAGE_KEYS, WINDOW_MS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
 import { ClaudeUsage, CodexUsage, ModelUsage, UsageLimit, UsageState } from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
@@ -35,9 +35,14 @@ const firstString = (...candidates: unknown[]): string | null => {
   return null;
 };
 
-const buildLimit = (percent: number | null, resetsAt: string | null): UsageLimit => ({
+const buildLimit = (
+  percent: number | null,
+  resetsAt: string | null,
+  windowMs?: number,
+): UsageLimit => ({
   percentage: clampPercent(percent ?? 0),
   resetsAt,
+  ...(windowMs === undefined ? {} : { windowMs }),
 });
 
 const finalize = <T extends { session: UsageLimit; weekly: UsageLimit }>(payload: T) => ({
@@ -57,9 +62,9 @@ const humanizeSlug = (slug: string): string =>
 
 /* -------------------- Claude -------------------- */
 
-const claudeWindowFrom = (window: unknown): UsageLimit => {
-  if (!isObject(window)) return buildLimit(0, null);
-  return buildLimit(readNumber(window.utilization), readString(window.resets_at));
+const claudeWindowFrom = (window: unknown, windowMs: number): UsageLimit => {
+  if (!isObject(window)) return buildLimit(0, null, windowMs);
+  return buildLimit(readNumber(window.utilization), readString(window.resets_at), windowMs);
 };
 
 const claudeModelBreakdown = (raw: Json): ModelUsage[] => {
@@ -73,11 +78,16 @@ const claudeModelBreakdown = (raw: Json): ModelUsage[] => {
     const displayName = model ? readString(model.display_name) : null;
     if (!displayName) return models;
 
-    const tag = entry.group === 'session' ? '5h' : '7d';
+    const isSession = entry.group === 'session';
+    const tag = isSession ? '5h' : '7d';
     models.push({
       id: `${readString(entry.kind) ?? 'scoped'}-${index}`,
       label: `${displayName} · ${tag}`,
-      limit: buildLimit(readNumber(entry.percent), readString(entry.resets_at)),
+      limit: buildLimit(
+        readNumber(entry.percent),
+        readString(entry.resets_at),
+        isSession ? WINDOW_MS.fiveHours : WINDOW_MS.sevenDays,
+      ),
     });
     return models;
   }, []);
@@ -89,8 +99,8 @@ const buildClaudeUsage = (raw: Json | null): ClaudeUsage | null => {
   return {
     plan: 'unknown',
     ...finalize({
-      session: claudeWindowFrom(raw.five_hour),
-      weekly: claudeWindowFrom(raw.seven_day),
+      session: claudeWindowFrom(raw.five_hour, WINDOW_MS.fiveHours),
+      weekly: claudeWindowFrom(raw.seven_day, WINDOW_MS.sevenDays),
     }),
     models: claudeModelBreakdown(raw),
     raw,
@@ -176,8 +186,12 @@ const codexResetTimestamp = (window: Json): string | null => {
   return null;
 };
 
-const codexWindowFrom = (window: Json): UsageLimit => {
-  return buildLimit(readNumber(window.used_percent), codexResetTimestamp(window));
+const codexWindowFrom = (window: Json, durationSeconds: number | null): UsageLimit => {
+  return buildLimit(
+    readNumber(window.used_percent),
+    codexResetTimestamp(window),
+    durationSeconds === null ? undefined : durationSeconds * 1000,
+  );
 };
 
 const parseCodexWindows = (entry: Json): ParsedCodexWindow[] => {
@@ -194,7 +208,7 @@ const parseCodexWindows = (entry: Json): ParsedCodexWindow[] => {
       position,
       durationSeconds,
       ...copy,
-      limit: codexWindowFrom(rawWindow),
+      limit: codexWindowFrom(rawWindow, durationSeconds),
     });
   });
 

@@ -14,6 +14,8 @@ export const STORAGE_KEYS = {
   claudeOverlayCollapsed: 'claude_overlay_collapsed',
   codexOverlayEnabled: 'codex_overlay_enabled',
   codexOverlayCollapsed: 'codex_overlay_collapsed',
+  /** Whether the sidepanel's settings section is expanded. */
+  settingsExpanded: 'settings_expanded',
 } as const;
 
 /** Name of the recurring alarm that refreshes usage in the background. */
@@ -21,6 +23,12 @@ export const REFRESH_ALARM = 'refreshUsage';
 
 /** How often the background worker re-fetches usage, in minutes. */
 export const REFRESH_INTERVAL_MINUTES = 5;
+
+/** Fixed window lengths, in milliseconds, for the limits Claude reports. */
+export const WINDOW_MS = {
+  fiveHours: 5 * 60 * 60 * 1000,
+  sevenDays: 7 * 24 * 60 * 60 * 1000,
+} as const;
 
 /** Percentage thresholds that drive the ok / warning / critical tone. */
 export const USAGE_THRESHOLDS = {

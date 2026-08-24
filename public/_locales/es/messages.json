@@ -77,6 +77,18 @@
   "resetsLabel": {
     "message": "se reinicia $1"
   },
+  "paceElapsedLabel": {
+    "message": "$1% transcurrido"
+  },
+  "paceDeltaLabel": {
+    "message": "$1 pts"
+  },
+  "paceProjectionLabel": {
+    "message": "a este ritmo: límite ~$1 antes del reinicio"
+  },
+  "settingsLabel": {
+    "message": "Ajustes"
+  },
   "nextResetLabel": {
     "message": "se reinicia $1"
   },

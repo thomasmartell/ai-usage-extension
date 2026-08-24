@@ -77,6 +77,18 @@
   "resetsLabel": {
     "message": "$1 में रीसेट"
   },
+  "paceElapsedLabel": {
+    "message": "$1% बीत चुका"
+  },
+  "paceDeltaLabel": {
+    "message": "$1 अंक"
+  },
+  "paceProjectionLabel": {
+    "message": "इस दर पर: रीसेट से ~$1 पहले सीमा"
+  },
+  "settingsLabel": {
+    "message": "सेटिंग्स"
+  },
   "nextResetLabel": {
     "message": "$1 में रीसेट"
   },
