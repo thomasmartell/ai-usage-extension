@@ -351,6 +351,37 @@ const fetchJsonRaw = async (url: string, init?: RequestInit): Promise<unknown> =
   return response.json();
 };
 
+/* -------------------- History -------------------- */
+
+/** Rolling per-limit usage samples: `{ [limitKey]: [[epochMs, percent], …] }`. */
+type UsageHistory = Record<string, Array<[number, number]>>;
+
+const HISTORY_MAX_AGE_MS = WINDOW_MS.sevenDays;
+/** 7 days of 5-minute samples is ~2016; the cap is a safety margin above it. */
+const HISTORY_MAX_SAMPLES = 2500;
+
+/** Claude model rows key by label (their ids carry an array index); Codex rows
+ *  key by id (their ids carry the stable position + window duration). */
+const historySamples = (state: UsageState): Array<[string, number]> => {
+  const samples: Array<[string, number]> = [];
+  if (state.claude) {
+    samples.push(['claude:session', state.claude.session.percentage]);
+    samples.push(['claude:weekly', state.claude.weekly.percentage]);
+    for (const model of state.claude.models) {
+      samples.push([`claude:model:${model.label}`, model.limit.percentage]);
+    }
+  }
+  if (state.codex) {
+    for (const window of state.codex.windows ?? []) {
+      samples.push([`codex:${window.id}`, window.limit.percentage]);
+    }
+    for (const model of state.codex.models) {
+      samples.push([`codex:${model.id}`, model.limit.percentage]);
+    }
+  }
+  return samples;
+};
+
 /* -------------------- Service -------------------- */
 
 export class UsageService {
@@ -374,7 +405,37 @@ export class UsageService {
     if (codex) next.codex = codex;
 
     await this.saveUsageState(next);
+    try {
+      await this.recordHistory(next);
+    } catch (error) {
+      console.debug('Failed to record usage history', error);
+    }
     return next;
+  }
+
+  /** Append the snapshot to the rolling history and prune anything stale. */
+  static async recordHistory(state: UsageState): Promise<void> {
+    const now = Date.now();
+    const cutoff = now - HISTORY_MAX_AGE_MS;
+    const stored = await chrome.storage.local.get(STORAGE_KEYS.usageHistory);
+    const history = (stored[STORAGE_KEYS.usageHistory] ?? {}) as UsageHistory;
+
+    for (const [key, percent] of historySamples(state)) {
+      const kept = (history[key] ?? []).filter(([t]) => t >= cutoff);
+      kept.push([now, percent]);
+      history[key] = kept.slice(-HISTORY_MAX_SAMPLES);
+    }
+
+    for (const key of Object.keys(history)) {
+      const kept = history[key].filter(([t]) => t >= cutoff);
+      if (kept.length === 0) {
+        delete history[key];
+      } else {
+        history[key] = kept;
+      }
+    }
+
+    await chrome.storage.local.set({ [STORAGE_KEYS.usageHistory]: history });
   }
 
   static async fetchClaudeUsage(): Promise<ClaudeUsage | null> {

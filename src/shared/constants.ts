@@ -6,6 +6,8 @@
 export const STORAGE_KEYS = {
   /** Persisted `UsageState` snapshot. */
   usageState: 'ai_usage_state',
+  /** Rolling 7-day history of usage samples, keyed per limit. */
+  usageHistory: 'ai_usage_history',
   /** Cached Claude organization id used to build the usage endpoint. */
   claudeOrgId: 'claude_org_id',
   /** Whether the on-page overlay is shown on claude.ai. */

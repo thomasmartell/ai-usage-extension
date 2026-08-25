@@ -15,6 +15,8 @@ export interface ModelUsage {
   id: string;
   label: string;
   limit: UsageLimit;
+  /** Reset of a sibling window folded into this row (see `groupQuietModels`). */
+  secondaryResetsAt?: string | null;
 }
 
 export interface ClaudeUsage {

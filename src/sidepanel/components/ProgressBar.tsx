@@ -10,10 +10,21 @@ interface ProgressBarProps {
   pace?: Pace | null;
 }
 
+/**
+ * Usage and time share one track: the fill is what's spent, the bright line
+ * is *now*, and the region between them is either banked budget (a green
+ * stripe behind the line) or overdraw (a hot segment past it). The pace chip
+ * repeats the gap as a number.
+ */
 export const ProgressBar: React.FC<ProgressBarProps> = ({ percentage, label, pace }) => {
   const value = clampPercent(percentage);
   const tone = getUsageTone(value);
   const valueLabel = msg('percentUsed', String(value));
+
+  const elapsed = pace ? pace.elapsedPct : null;
+  const banked = elapsed !== null && elapsed > value;
+  const overdrawn = elapsed !== null && value > elapsed;
+  const overTone = pace?.tone === 'critical' ? 'critical' : 'warning';
 
   return (
     <div className="au-progress">
@@ -21,7 +32,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ percentage, label, pac
         <span className="au-progress__label">{label}</span>
         <span className="au-progress__readout">
           <span className="au-progress__value">{valueLabel}</span>
-          {pace && pace.showDelta && (
+          {pace && (
             <span className={`au-pace-chip au-pace-chip--${pace.tone}`}>
               {msg('paceDeltaLabel', formatPaceDelta(pace.deltaPts))}
             </span>
@@ -29,7 +40,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ percentage, label, pac
         </span>
       </div>
       <div
-        className={`au-meter au-meter--${tone}`}
+        className={`au-track au-track--${tone}`}
         role="progressbar"
         aria-label={label}
         aria-valuenow={value}
@@ -37,11 +48,28 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ percentage, label, pac
         aria-valuemin={0}
         aria-valuemax={100}
       >
-        <div className="au-meter__fill" style={{ width: `${value}%` }} />
-        {pace && (
+        {banked && (
           <span
-            className="au-meter__tick"
-            style={{ left: `clamp(0px, calc(${pace.elapsedPct}% - 1px), calc(100% - 2px))` }}
+            className="au-track__bank"
+            style={{ left: `${value}%`, width: `${elapsed - value}%` }}
+            aria-hidden="true"
+          />
+        )}
+        <div
+          className="au-track__fill"
+          style={{ width: `${overdrawn ? elapsed : value}%` }}
+        />
+        {overdrawn && (
+          <span
+            className={`au-track__over au-track__over--${overTone}`}
+            style={{ left: `${elapsed}%`, width: `${value - elapsed}%` }}
+            aria-hidden="true"
+          />
+        )}
+        {elapsed !== null && (
+          <span
+            className="au-track__now"
+            style={{ left: `clamp(1px, calc(${elapsed}% - 1px), calc(100% - 3px))` }}
             aria-hidden="true"
           />
         )}

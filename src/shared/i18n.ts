@@ -28,6 +28,7 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   resetsLabel: 'resets $1',
   paceElapsedLabel: '$1% through',
   paceDeltaLabel: '$1 pts',
+  bindingLabel: 'binding · $1',
   paceProjectionLabel: 'at this rate: limit ~$1 before reset',
   settingsLabel: 'Settings',
   nextResetLabel: 'resets $1',

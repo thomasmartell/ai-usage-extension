@@ -5,6 +5,8 @@ interface UsageCardProps {
   subtitle?: string;
   iconSrc?: string;
   iconAlt?: string;
+  /** Optional element pinned to the right edge of the header (e.g. binding chip). */
+  headerExtra?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -14,6 +16,7 @@ export const UsageCard: React.FC<UsageCardProps> = ({
   subtitle,
   iconSrc,
   iconAlt,
+  headerExtra,
   children,
 }) => {
   return (
@@ -24,6 +27,7 @@ export const UsageCard: React.FC<UsageCardProps> = ({
           <h2 className="au-card__title">{title}</h2>
           {subtitle && <p className="au-card__subtitle">{subtitle}</p>}
         </div>
+        {headerExtra}
       </header>
       <div className="au-card__body">{children}</div>
     </section>

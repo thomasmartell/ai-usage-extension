@@ -8,11 +8,18 @@ import { ProgressBar } from './ProgressBar';
 interface UsageMetricProps {
   label: string;
   limit: UsageLimit;
+  /** Reset of a sibling window folded into this row. */
+  secondaryResetsAt?: string | null;
   now: number;
 }
 
 /** A labelled progress bar plus its "used / limit · elapsed · resets" caption. */
-export const UsageMetric: React.FC<UsageMetricProps> = ({ label, limit, now }) => {
+export const UsageMetric: React.FC<UsageMetricProps> = ({
+  label,
+  limit,
+  secondaryResetsAt,
+  now,
+}) => {
   const hasCount =
     typeof limit.used === 'number' && typeof limit.limit === 'number' && limit.limit > 0;
   const pace = paceFromLimit(limit, now);
@@ -36,6 +43,7 @@ export const UsageMetric: React.FC<UsageMetricProps> = ({ label, limit, now }) =
           </>
         )}
         {msg('resetsLabel', formatReset(limit.resetsAt, now))}
+        {secondaryResetsAt && ` / ${formatReset(secondaryResetsAt, now)}`}
       </p>
       {pace && pace.projectedEarlyMs !== null && (
         <p className="au-projection">
