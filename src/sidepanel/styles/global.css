@@ -420,40 +420,64 @@ input {
   border-color: rgba(201, 111, 92, 0.34);
 }
 
-.au-meter {
+/* Pace track: usage and time on one bar. The fill is spend, the bright
+   line is now, the stripe between them is banked budget (or, past the
+   line, overdraw in the pace tone). */
+
+.au-track {
   position: relative;
   width: 100%;
-  height: 4px;
-  border-radius: 999px;
+  height: 10px;
+  border-radius: 5px;
   background: var(--au-track);
+  overflow: hidden;
 }
 
-.au-meter__fill {
-  height: 100%;
-  border-radius: 999px;
+.au-track__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 5px 0 0 5px;
   background: var(--au-fill);
   transition: width 260ms ease;
 }
 
-.au-meter--warning .au-meter__fill {
+.au-track--warning .au-track__fill {
   background: var(--au-fill-warning);
 }
 
-.au-meter--critical .au-meter__fill {
+.au-track--critical .au-track__fill {
   background: var(--au-fill-critical);
 }
 
-/* Elapsed-time marker: a hairline crossing the bar, haloed so it reads
-   over both the track and the fill. */
-
-.au-meter__tick {
+.au-track__bank {
   position: absolute;
-  top: -2px;
+  top: 0;
+  bottom: 0;
+  background: rgba(143, 168, 126, 0.2); /* --au-fill-ahead at stripe strength */
+}
+
+.au-track__over {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.au-track__over--warning {
+  background: var(--au-fill-warning);
+}
+
+.au-track__over--critical {
+  background: var(--au-fill-critical);
+}
+
+.au-track__now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
   width: 2px;
-  height: 8px;
   border-radius: 1px;
   background: var(--au-tick);
-  box-shadow: 0 0 0 1px var(--au-surface);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 .au-meta {
@@ -565,7 +589,7 @@ input {
 @media (prefers-reduced-motion: reduce) {
   .au-loader,
   .au-refresh--loading::before,
-  .au-meter__fill {
+  .au-track__fill {
     animation: none;
     transition: none;
   }

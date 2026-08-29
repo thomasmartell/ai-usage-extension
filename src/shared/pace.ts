@@ -36,8 +36,6 @@ export interface Pace {
   /** `usedPct - elapsedPct`, in percentage points. Negative means under pace. */
   deltaPts: number;
   tone: PaceTone;
-  /** False on untouched meters, where a large negative delta is just noise. */
-  showDelta: boolean;
   /** Milliseconds before the reset the limit is projected to run out, if over pace. */
   projectedEarlyMs: number | null;
 }
@@ -91,7 +89,6 @@ export const computePace = ({ usedPct, windowMs, msToReset }: PaceInput): Pace |
     elapsedPct,
     deltaPts,
     tone: paceTone(deltaPts),
-    showDelta: used > 0,
     projectedEarlyMs: projectEarlyMs(used, elapsedPct, deltaPts, windowMs),
   };
 };

@@ -1,7 +1,13 @@
 import React from 'react';
 import { msg } from '../../shared/i18n';
 import { formatRelativeTime } from '../../shared/utils';
-import { getUsageWindows, type ProviderUsage } from '../../shared/usageWindows';
+import {
+  getUsageWindows,
+  groupQuietModels,
+  sortByWindow,
+  withInferredWindow,
+  type ProviderUsage,
+} from '../../shared/usageWindows';
 import { UsageCard } from './UsageCard';
 import { UsageMetric } from './UsageMetric';
 
@@ -26,27 +32,12 @@ const Skeleton: React.FC = () => (
   </div>
 );
 
-const ModelBreakdown: React.FC<{ usage: ProviderUsage; now: number }> = ({ usage, now }) => {
-  if (!usage.models.length) {
-    return null;
-  }
-
-  return (
-    <div className="au-breakdown">
-      {usage.models.map((model) => (
-        <UsageMetric key={model.id} label={model.label} limit={model.limit} now={now} />
-      ))}
-    </div>
-  );
-};
-
-const ProviderLimits: React.FC<{ usage: ProviderUsage; now: number }> = ({ usage, now }) => (
-  <>
-    {getUsageWindows(usage).map((window) => (
-      <UsageMetric key={window.id} label={window.label} limit={window.limit} now={now} />
-    ))}
-  </>
-);
+/** Every limit the card shows: provider windows shortest first (5h, then
+ *  weekly), followed by the model breakdown rows (e.g. Fable). */
+const cardRows = (usage: ProviderUsage) => [
+  ...sortByWindow(getUsageWindows(usage)),
+  ...groupQuietModels(usage.models.map(withInferredWindow)),
+];
 
 /** Renders one provider's usage, handling loading / empty / data states. */
 export const ProviderCard: React.FC<ProviderCardProps> = ({
@@ -65,14 +56,23 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
       ? msg('updated', formatRelativeTime(usage.lastUpdated, now))
       : msg('notConnected');
 
+  const rows = usage && !loading ? cardRows(usage) : [];
+
   return (
     <UsageCard title={title} subtitle={subtitle} iconSrc={iconSrc} iconAlt={iconAlt}>
       {loading ? (
         <Skeleton />
       ) : usage ? (
         <>
-          <ProviderLimits usage={usage} now={now} />
-          <ModelBreakdown usage={usage} now={now} />
+          {rows.map((row) => (
+            <UsageMetric
+              key={row.id}
+              label={row.label}
+              limit={row.limit}
+              secondaryResetsAt={row.secondaryResetsAt}
+              now={now}
+            />
+          ))}
           {'plan' in usage && usage.plan !== 'unknown' && (
             <p className="au-footnote">{msg('planLabel', usage.plan)}</p>
           )}

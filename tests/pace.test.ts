@@ -23,7 +23,6 @@ describe('computePace', () => {
     assert.equal(pace.elapsedPct, 60);
     assert.equal(pace.deltaPts, -52);
     assert.equal(pace.tone, 'ahead');
-    assert.equal(pace.showDelta, true);
     assert.equal(pace.projectedEarlyMs, null);
   });
 
@@ -101,13 +100,13 @@ describe('computePace', () => {
     assert.equal(enough?.projectedEarlyMs, Math.round((2 / 3) * 7 * 24 * HOUR));
   });
 
-  it('suppresses the delta chip on an untouched meter', () => {
+  it('still paces an untouched meter so the banked time is visible', () => {
     const pace = computePace({ usedPct: 0, windowMs: 7 * 24 * HOUR, msToReset: 3 * 24 * HOUR });
 
     assert.ok(pace);
     assert.equal(pace.elapsedPct, 57);
     assert.equal(pace.deltaPts, -57);
-    assert.equal(pace.showDelta, false);
+    assert.equal(pace.tone, 'ahead');
   });
 
   it('handles a just-reset window without dividing by zero', () => {
