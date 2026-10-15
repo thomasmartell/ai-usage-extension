@@ -1,6 +1,7 @@
 import claudeBrandAsset from '../assets/brands/claude-anthropic.jpg';
 import codexBrandAsset from '../assets/brands/codex-openai.jpg';
 import { msg } from '../shared/i18n';
+import { codexDiagnostics, DIAGNOSTIC_BUILD } from '../shared/diagnostics';
 import { useNow } from '../shared/hooks/useNow';
 import { ProviderCard } from './components/ProviderCard';
 import { useUsageData } from './hooks/useUsageData';
@@ -137,6 +138,12 @@ export const App = () => {
           </div>
         )}
       </section>
+
+      <details className="au-diagnostics">
+        <summary>Quota diagnostics · {DIAGNOSTIC_BUILD}</summary>
+        <p>Quota values and anonymous account fingerprints only. No passwords or tokens.</p>
+        <pre>{JSON.stringify(codexDiagnostics(usage.codex), null, 2)}</pre>
+      </details>
 
       <footer className="au-footer">
         <a

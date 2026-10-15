@@ -594,3 +594,19 @@ input {
     transition: none;
   }
 }
+
+.au-diagnostics {
+  padding: 12px;
+  color: var(--au-text);
+  font-size: 11px;
+}
+
+.au-diagnostics summary {
+  cursor: pointer;
+}
+
+.au-diagnostics pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+}

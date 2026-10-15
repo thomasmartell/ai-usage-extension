@@ -1,13 +1,24 @@
 import { STORAGE_KEYS, WINDOW_MS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
-import { ClaudeUsage, CodexUsage, ModelUsage, UsageLimit, UsageState } from '../../shared/types';
+import { accountFingerprint } from '../../shared/diagnostics';
+import {
+  ClaudeUsage,
+  CodexUsage,
+  ModelUsage,
+  UsageLimit,
+  UsageReset,
+  UsageState,
+} from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
 
 const ENDPOINTS = {
   claudeOrgs: 'https://claude.ai/api/organizations',
-  claudeUsage: (orgId: string) => `https://claude.ai/api/organizations/${orgId}/usage`,
+  /** `cedar_ember=1` asks for the reset-grant block claude.ai's own usage page shows. */
+  claudeUsage: (orgId: string) =>
+    `https://claude.ai/api/organizations/${orgId}/usage?cedar_ember=1`,
   codexSession: 'https://chatgpt.com/api/auth/session',
   codexUsage: 'https://chatgpt.com/backend-api/wham/usage',
+  codexResetCredits: 'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits',
 } as const;
 
 const JSON_HEADERS = { Accept: 'application/json' } as const;
@@ -93,7 +104,35 @@ const claudeModelBreakdown = (raw: Json): ModelUsage[] => {
   }, []);
 };
 
-const buildClaudeUsage = (raw: Json | null): ClaudeUsage | null => {
+/**
+ * Reset grants arrive under `cedar_ember.grants` when the usage endpoint is
+ * asked for them. A grant is worth showing only while it still has resets
+ * left and the service says it can be used now; each remaining reset in it
+ * becomes its own entry.
+ */
+const claudeResets = (raw: Json): UsageReset[] => {
+  const block = isObject(raw.cedar_ember) ? raw.cedar_ember : null;
+  if (!block || !Array.isArray(block.grants)) return [];
+
+  return block.grants.reduce<UsageReset[]>((resets, grant) => {
+    if (!isObject(grant)) return resets;
+    const id = readString(grant.id);
+    const left = readNumber(grant.resets_left) ?? 0;
+    if (!id || left <= 0 || grant.usable_now !== true) return resets;
+
+    const type = readString(grant.type);
+    const label = type === 'full' ? msg('fullReset') : humanizeSlug(type ?? 'reset');
+    const expiresAt = readString(grant.ends_at);
+    // One row per remaining reset, so a multi-reset grant isn't undercounted.
+    const count = Math.floor(left);
+    for (let n = 1; n <= count; n += 1) {
+      resets.push({ id: count === 1 ? id : `${id}:${n}`, label, expiresAt });
+    }
+    return resets;
+  }, []);
+};
+
+export const buildClaudeUsage = (raw: Json | null): ClaudeUsage | null => {
   if (!raw) return null;
 
   return {
@@ -103,6 +142,7 @@ const buildClaudeUsage = (raw: Json | null): ClaudeUsage | null => {
       weekly: claudeWindowFrom(raw.seven_day, WINDOW_MS.sevenDays),
     }),
     models: claudeModelBreakdown(raw),
+    resets: claudeResets(raw),
     raw,
   };
 };
@@ -271,6 +311,24 @@ const codexModelBreakdown = (raw: Json): ModelUsage[] => {
   return models;
 };
 
+/** Parse the reset-credits endpoint: only credits still marked available count. */
+export const buildCodexResets = (raw: Json | null): UsageReset[] => {
+  if (!raw || !Array.isArray(raw.credits)) return [];
+
+  return raw.credits.reduce<UsageReset[]>((resets, credit) => {
+    if (!isObject(credit)) return resets;
+    const id = readString(credit.id);
+    if (!id || credit.status !== 'available') return resets;
+
+    resets.push({
+      id,
+      label: readString(credit.title) ?? msg('fullReset'),
+      expiresAt: readString(credit.expires_at),
+    });
+    return resets;
+  }, []);
+};
+
 const codexAvailableResets = (raw: Json): number | null => {
   const resetCredits = raw.rate_limit_reset_credits;
   if (!isObject(resetCredits)) return null;
@@ -292,6 +350,26 @@ export const buildCodexUsage = (raw: Json | null): CodexUsage | null => {
   };
 };
 
+const accountIdFromAccessToken = (token: string | null): string | null => {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    const bytes = Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+    const claims: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    if (!isObject(claims)) return null;
+    const auth = claims['https://api.openai.com/auth'];
+    if (!isObject(auth)) return null;
+    // This is routing metadata from the token already used for this request,
+    // not local token validation. Never use the user/subject ID as an account ID.
+    return firstString(auth.chatgpt_account_id, auth.account_id);
+  } catch {
+    return null;
+  }
+};
+
 const accountIdFromSession = (session: Json): string | null => {
   const direct = firstString(
     session.account_id,
@@ -300,6 +378,16 @@ const accountIdFromSession = (session: Json): string | null => {
     session.activeAccountId,
   );
   if (direct) return direct;
+
+  // Some web session versions nest the selected account under account.id.
+  // Prefer it to user defaults or the first membership, which can be another account.
+  if (isObject(session.account)) {
+    const selectedAccount = firstString(session.account.id, session.account.account_id);
+    if (selectedAccount) return selectedAccount;
+  }
+
+  const tokenAccount = accountIdFromAccessToken(readString(session.accessToken));
+  if (tokenAccount) return tokenAccount;
 
   if (isObject(session.user)) {
     const fromUser = firstString(
@@ -459,19 +547,37 @@ export class UsageService {
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${session.accessToken}`,
+      // Match the current ChatGPT usage client's explicit application context.
+      'OAI-App-Brand': 'chatgpt',
     };
     if (session.accountId) {
       headers['ChatGPT-Account-Id'] = session.accountId;
     }
 
-    const result = await fetchJson(ENDPOINTS.codexUsage, { headers });
+    const result = await fetchJson(ENDPOINTS.codexUsage, { headers, cache: 'no-store' });
     if (!result.ok) return null;
 
-    return buildCodexUsage(result.data);
+    const usage = buildCodexUsage(result.data);
+    if (!usage) return null;
+
+    usage.diagnostics = {
+      requestAccountFingerprint: await accountFingerprint(session.accountId),
+      responseAccountFingerprint: await accountFingerprint(readString(result.data.account_id)),
+    };
+
+    // The expiry dates live on a separate endpoint; a failure there must not
+    // cost us the usage snapshot itself. Leaving `resets` unset on failure
+    // marks the details as unknown, so the card falls back to the count.
+    const credits = await fetchJson(ENDPOINTS.codexResetCredits, {
+      headers,
+      cache: 'no-store',
+    }).catch(() => null);
+    if (credits?.ok) usage.resets = buildCodexResets(credits.data);
+    return usage;
   }
 
   private static async fetchCodexSession(): Promise<CodexSessionInfo | null> {
-    const payload = await fetchJsonRaw(ENDPOINTS.codexSession);
+    const payload = await fetchJsonRaw(ENDPOINTS.codexSession, { cache: 'no-store' });
     if (!isObject(payload)) return null;
 
     const accessToken = readString(payload.accessToken);

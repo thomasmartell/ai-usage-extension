@@ -11,6 +11,8 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   refreshFailed: 'Refresh failed',
   overlayToggleLabel: 'On-page overlays',
   availableResetsLabel: 'Available resets · $1',
+  fullReset: 'Full reset',
+  resetExpiresLabel: '$1 · expires $2',
   loadingSnapshot: 'loading snapshot',
   notConnected: 'not connected',
   updated: 'updated $1',

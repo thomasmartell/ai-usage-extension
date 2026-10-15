@@ -1,6 +1,6 @@
 import React from 'react';
 import { msg } from '../../shared/i18n';
-import { formatRelativeTime } from '../../shared/utils';
+import { formatExpiryDate, formatRelativeTime } from '../../shared/utils';
 import {
   getUsageWindows,
   groupQuietModels,
@@ -76,11 +76,19 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
           {'plan' in usage && usage.plan !== 'unknown' && (
             <p className="au-footnote">{msg('planLabel', usage.plan)}</p>
           )}
-          {'availableResets' in usage && usage.availableResets !== null && (
-            <p className="au-footnote">
-              {msg('availableResetsLabel', String(usage.availableResets))}
+          {usage.resets?.map((reset) => (
+            <p key={reset.id} className="au-footnote">
+              {msg('resetExpiresLabel', [reset.label, formatExpiryDate(reset.expiresAt)])}
             </p>
-          )}
+          ))}
+          {usage.resets === undefined &&
+            'availableResets' in usage &&
+            usage.availableResets !== null &&
+            usage.availableResets > 0 && (
+              <p className="au-footnote">
+                {msg('availableResetsLabel', String(usage.availableResets))}
+              </p>
+            )}
         </>
       ) : (
         <p className="au-empty">{emptyHint}</p>

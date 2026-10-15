@@ -32,6 +32,12 @@
   "availableResetsLabel": {
     "message": "उपलब्ध रीसेट · $1"
   },
+  "fullReset": {
+    "message": "पूर्ण रीसेट"
+  },
+  "resetExpiresLabel": {
+    "message": "$1 · समाप्ति $2"
+  },
   "loadingSnapshot": {
     "message": "डेटा लोड हो रहा है"
   },

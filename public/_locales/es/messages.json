@@ -32,6 +32,12 @@
   "availableResetsLabel": {
     "message": "Reinicios disponibles · $1"
   },
+  "fullReset": {
+    "message": "Reinicio completo"
+  },
+  "resetExpiresLabel": {
+    "message": "$1 · caduca el $2"
+  },
   "loadingSnapshot": {
     "message": "cargando datos"
   },
