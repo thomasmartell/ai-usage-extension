@@ -67,6 +67,14 @@ const claudeUsage = {
         usable_now: true,
       },
       {
+        id: 'unflagged-promo',
+        label: 'Usability not stated',
+        type: 'full',
+        resets_left: 1,
+        resets_total: 1,
+        ends_at: '2026-12-01T00:00:00+00:00',
+      },
+      {
         id: 'held-promo',
         label: 'Not yet usable',
         type: 'five_hour',
@@ -168,7 +176,8 @@ describe('fetching reset credits', () => {
     const usage = await UsageService.fetchCodexUsage();
     assert.ok(usage);
     assert.equal(usage.windows[0].limit.percentage, 77);
-    assert.deepEqual(usage.resets, []);
+    // Unknown, not empty: the card then falls back to the usage endpoint's count.
+    assert.equal(usage.resets, undefined);
   });
 
   it('asks the Claude usage endpoint for reset grants', async () => {

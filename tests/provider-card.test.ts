@@ -54,6 +54,19 @@ describe('ProviderCard resets', () => {
     assert.match(html, /Available resets · 2/);
   });
 
+  it('shows no count when fresh reset details say there are none', () => {
+    const html = render({
+      windows: [],
+      models: [],
+      resets: [],
+      availableResets: 2,
+      status: 'ok',
+      lastUpdated: NOW,
+    });
+
+    assert.doesNotMatch(html, /Available resets/);
+  });
+
   it('shows Claude resets alongside the usage rows', () => {
     const html = render({
       plan: 'unknown',

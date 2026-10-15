@@ -81,7 +81,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
               {msg('resetExpiresLabel', [reset.label, formatExpiryDate(reset.expiresAt)])}
             </p>
           ))}
-          {!usage.resets?.length &&
+          {usage.resets === undefined &&
             'availableResets' in usage &&
             usage.availableResets !== null &&
             usage.availableResets > 0 && (

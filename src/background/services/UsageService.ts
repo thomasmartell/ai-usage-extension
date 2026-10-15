@@ -117,7 +117,7 @@ const claudeResets = (raw: Json): UsageReset[] => {
     if (!isObject(grant)) return resets;
     const id = readString(grant.id);
     const left = readNumber(grant.resets_left) ?? 0;
-    if (!id || left <= 0 || grant.usable_now === false) return resets;
+    if (!id || left <= 0 || grant.usable_now !== true) return resets;
 
     const type = readString(grant.type);
     resets.push({
@@ -563,12 +563,13 @@ export class UsageService {
     };
 
     // The expiry dates live on a separate endpoint; a failure there must not
-    // cost us the usage snapshot itself.
+    // cost us the usage snapshot itself. Leaving `resets` unset on failure
+    // marks the details as unknown, so the card falls back to the count.
     const credits = await fetchJson(ENDPOINTS.codexResetCredits, {
       headers,
       cache: 'no-store',
     }).catch(() => null);
-    usage.resets = credits?.ok ? buildCodexResets(credits.data) : [];
+    if (credits?.ok) usage.resets = buildCodexResets(credits.data);
     return usage;
   }
 
