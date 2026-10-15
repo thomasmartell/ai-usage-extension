@@ -111,6 +111,31 @@ describe('buildClaudeUsage resets', () => {
     assert.equal(usage.weekly.percentage, 74);
   });
 
+  it('lists one entry per reset left in a grant', () => {
+    const usage = buildClaudeUsage({
+      cedar_ember: {
+        grants: [
+          {
+            id: 'bundle',
+            type: 'full',
+            resets_left: 2,
+            resets_total: 3,
+            ends_at: '2026-11-01T00:00:00+00:00',
+            usable_now: true,
+          },
+        ],
+      },
+    });
+    assert.ok(usage);
+    assert.deepEqual(
+      usage.resets?.map(({ id, expiresAt }) => [id, expiresAt]),
+      [
+        ['bundle:1', '2026-11-01T00:00:00+00:00'],
+        ['bundle:2', '2026-11-01T00:00:00+00:00'],
+      ],
+    );
+  });
+
   it('yields an empty list when the grants field is absent', () => {
     const usage = buildClaudeUsage({ five_hour: {}, seven_day: {} });
     assert.ok(usage);

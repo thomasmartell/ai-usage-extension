@@ -107,7 +107,8 @@ const claudeModelBreakdown = (raw: Json): ModelUsage[] => {
 /**
  * Reset grants arrive under `cedar_ember.grants` when the usage endpoint is
  * asked for them. A grant is worth showing only while it still has resets
- * left and the service says it can be used now.
+ * left and the service says it can be used now; each remaining reset in it
+ * becomes its own entry.
  */
 const claudeResets = (raw: Json): UsageReset[] => {
   const block = isObject(raw.cedar_ember) ? raw.cedar_ember : null;
@@ -120,11 +121,13 @@ const claudeResets = (raw: Json): UsageReset[] => {
     if (!id || left <= 0 || grant.usable_now !== true) return resets;
 
     const type = readString(grant.type);
-    resets.push({
-      id,
-      label: type === 'full' ? msg('fullReset') : humanizeSlug(type ?? 'reset'),
-      expiresAt: readString(grant.ends_at),
-    });
+    const label = type === 'full' ? msg('fullReset') : humanizeSlug(type ?? 'reset');
+    const expiresAt = readString(grant.ends_at);
+    // One row per remaining reset, so a multi-reset grant isn't undercounted.
+    const count = Math.floor(left);
+    for (let n = 1; n <= count; n += 1) {
+      resets.push({ id: count === 1 ? id : `${id}:${n}`, label, expiresAt });
+    }
     return resets;
   }, []);
 };
