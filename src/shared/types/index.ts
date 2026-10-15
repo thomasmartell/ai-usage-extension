@@ -19,11 +19,21 @@ export interface ModelUsage {
   secondaryResetsAt?: string | null;
 }
 
+/** A usage-limit reset credit the provider has granted and not yet spent. */
+export interface UsageReset {
+  id: string;
+  label: string;
+  /** When the credit lapses if unused; `null` when the provider gives no expiry. */
+  expiresAt: string | null;
+}
+
 export interface ClaudeUsage {
   plan: string;
   session: UsageLimit;
   weekly: UsageLimit;
   models: ModelUsage[];
+  /** Optional so snapshots written before resets were tracked still type-check. */
+  resets?: UsageReset[];
   status: UsageStatus;
   lastUpdated: number;
   raw?: Record<string, unknown>;
@@ -36,6 +46,8 @@ export interface CodexUsage {
   session?: UsageLimit;
   weekly?: UsageLimit;
   models: ModelUsage[];
+  resets?: UsageReset[];
+  /** Count from the usage endpoint; kept so older snapshots still show a figure. */
   availableResets: number | null;
   status: UsageStatus;
   lastUpdated: number;

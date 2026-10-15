@@ -67,6 +67,23 @@ export const formatReset = (resetAt: string | null, now: number): string => {
 };
 
 /**
+ * Short calendar date for when a reset credit lapses, e.g. `22 Oct`.
+ * Returns `unknown` when the provider gave no usable date.
+ */
+export const formatExpiryDate = (expiresAt: string | null): string => {
+  if (!expiresAt) {
+    return msg('timeUnknown');
+  }
+
+  const date = new Date(expiresAt);
+  if (!Number.isFinite(date.getTime())) {
+    return msg('timeUnknown');
+  }
+
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+};
+
+/**
  * Human-readable "time since" label for a past timestamp.
  * Returns e.g. `just now`, `5m ago`, `3h ago`.
  */

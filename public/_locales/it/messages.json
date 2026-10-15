@@ -32,6 +32,12 @@
   "availableResetsLabel": {
     "message": "Ripristini disponibili · $1"
   },
+  "fullReset": {
+    "message": "Reset completo"
+  },
+  "resetExpiresLabel": {
+    "message": "$1 · scade il $2"
+  },
   "loadingSnapshot": {
     "message": "caricamento dati"
   },

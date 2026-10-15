@@ -1,13 +1,23 @@
 import { STORAGE_KEYS, WINDOW_MS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
-import { ClaudeUsage, CodexUsage, ModelUsage, UsageLimit, UsageState } from '../../shared/types';
+import {
+  ClaudeUsage,
+  CodexUsage,
+  ModelUsage,
+  UsageLimit,
+  UsageReset,
+  UsageState,
+} from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
 
 const ENDPOINTS = {
   claudeOrgs: 'https://claude.ai/api/organizations',
-  claudeUsage: (orgId: string) => `https://claude.ai/api/organizations/${orgId}/usage`,
+  /** `cedar_ember=1` asks for the reset-grant block claude.ai's own usage page shows. */
+  claudeUsage: (orgId: string) =>
+    `https://claude.ai/api/organizations/${orgId}/usage?cedar_ember=1`,
   codexSession: 'https://chatgpt.com/api/auth/session',
   codexUsage: 'https://chatgpt.com/backend-api/wham/usage',
+  codexResetCredits: 'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits',
 } as const;
 
 const JSON_HEADERS = { Accept: 'application/json' } as const;
@@ -93,7 +103,32 @@ const claudeModelBreakdown = (raw: Json): ModelUsage[] => {
   }, []);
 };
 
-const buildClaudeUsage = (raw: Json | null): ClaudeUsage | null => {
+/**
+ * Reset grants arrive under `cedar_ember.grants` when the usage endpoint is
+ * asked for them. A grant is worth showing only while it still has resets
+ * left and the service says it can be used now.
+ */
+const claudeResets = (raw: Json): UsageReset[] => {
+  const block = isObject(raw.cedar_ember) ? raw.cedar_ember : null;
+  if (!block || !Array.isArray(block.grants)) return [];
+
+  return block.grants.reduce<UsageReset[]>((resets, grant) => {
+    if (!isObject(grant)) return resets;
+    const id = readString(grant.id);
+    const left = readNumber(grant.resets_left) ?? 0;
+    if (!id || left <= 0 || grant.usable_now === false) return resets;
+
+    const type = readString(grant.type);
+    resets.push({
+      id,
+      label: type === 'full' ? msg('fullReset') : humanizeSlug(type ?? 'reset'),
+      expiresAt: readString(grant.ends_at),
+    });
+    return resets;
+  }, []);
+};
+
+export const buildClaudeUsage = (raw: Json | null): ClaudeUsage | null => {
   if (!raw) return null;
 
   return {
@@ -103,6 +138,7 @@ const buildClaudeUsage = (raw: Json | null): ClaudeUsage | null => {
       weekly: claudeWindowFrom(raw.seven_day, WINDOW_MS.sevenDays),
     }),
     models: claudeModelBreakdown(raw),
+    resets: claudeResets(raw),
     raw,
   };
 };
@@ -269,6 +305,24 @@ const codexModelBreakdown = (raw: Json): ModelUsage[] => {
   }
 
   return models;
+};
+
+/** Parse the reset-credits endpoint: only credits still marked available count. */
+export const buildCodexResets = (raw: Json | null): UsageReset[] => {
+  if (!raw || !Array.isArray(raw.credits)) return [];
+
+  return raw.credits.reduce<UsageReset[]>((resets, credit) => {
+    if (!isObject(credit)) return resets;
+    const id = readString(credit.id);
+    if (!id || credit.status !== 'available') return resets;
+
+    resets.push({
+      id,
+      label: readString(credit.title) ?? msg('fullReset'),
+      expiresAt: readString(credit.expires_at),
+    });
+    return resets;
+  }, []);
 };
 
 const codexAvailableResets = (raw: Json): number | null => {
@@ -467,7 +521,14 @@ export class UsageService {
     const result = await fetchJson(ENDPOINTS.codexUsage, { headers });
     if (!result.ok) return null;
 
-    return buildCodexUsage(result.data);
+    const usage = buildCodexUsage(result.data);
+    if (!usage) return null;
+
+    // The expiry dates live on a separate endpoint; a failure there must not
+    // cost us the usage snapshot itself.
+    const credits = await fetchJson(ENDPOINTS.codexResetCredits, { headers }).catch(() => null);
+    usage.resets = credits?.ok ? buildCodexResets(credits.data) : [];
+    return usage;
   }
 
   private static async fetchCodexSession(): Promise<CodexSessionInfo | null> {

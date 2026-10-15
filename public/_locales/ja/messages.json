@@ -32,6 +32,12 @@
   "availableResetsLabel": {
     "message": "利用可能なリセット回数 · $1"
   },
+  "fullReset": {
+    "message": "フルリセット"
+  },
+  "resetExpiresLabel": {
+    "message": "$1 · 期限 $2"
+  },
   "loadingSnapshot": {
     "message": "データを読み込み中"
   },

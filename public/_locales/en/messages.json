@@ -32,6 +32,12 @@
   "availableResetsLabel": {
     "message": "Available resets · $1"
   },
+  "fullReset": {
+    "message": "Full reset"
+  },
+  "resetExpiresLabel": {
+    "message": "$1 · expires $2"
+  },
   "loadingSnapshot": {
     "message": "loading snapshot"
   },

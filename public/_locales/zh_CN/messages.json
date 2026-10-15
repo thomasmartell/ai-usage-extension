@@ -32,6 +32,12 @@
   "availableResetsLabel": {
     "message": "可用重置次数 · $1"
   },
+  "fullReset": {
+    "message": "完全重置"
+  },
+  "resetExpiresLabel": {
+    "message": "$1 · 到期 $2"
+  },
   "loadingSnapshot": {
     "message": "正在加载数据"
   },
