@@ -1,5 +1,6 @@
 import { STORAGE_KEYS, WINDOW_MS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
+import { accountFingerprint } from '../../shared/diagnostics';
 import {
   ClaudeUsage,
   CodexUsage,
@@ -346,6 +347,26 @@ export const buildCodexUsage = (raw: Json | null): CodexUsage | null => {
   };
 };
 
+const accountIdFromAccessToken = (token: string | null): string | null => {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    const bytes = Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+    const claims: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    if (!isObject(claims)) return null;
+    const auth = claims['https://api.openai.com/auth'];
+    if (!isObject(auth)) return null;
+    // This is routing metadata from the token already used for this request,
+    // not local token validation. Never use the user/subject ID as an account ID.
+    return firstString(auth.chatgpt_account_id, auth.account_id);
+  } catch {
+    return null;
+  }
+};
+
 const accountIdFromSession = (session: Json): string | null => {
   const direct = firstString(
     session.account_id,
@@ -354,6 +375,16 @@ const accountIdFromSession = (session: Json): string | null => {
     session.activeAccountId,
   );
   if (direct) return direct;
+
+  // Some web session versions nest the selected account under account.id.
+  // Prefer it to user defaults or the first membership, which can be another account.
+  if (isObject(session.account)) {
+    const selectedAccount = firstString(session.account.id, session.account.account_id);
+    if (selectedAccount) return selectedAccount;
+  }
+
+  const tokenAccount = accountIdFromAccessToken(readString(session.accessToken));
+  if (tokenAccount) return tokenAccount;
 
   if (isObject(session.user)) {
     const fromUser = firstString(
@@ -513,26 +544,36 @@ export class UsageService {
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${session.accessToken}`,
+      // Match the current ChatGPT usage client's explicit application context.
+      'OAI-App-Brand': 'chatgpt',
     };
     if (session.accountId) {
       headers['ChatGPT-Account-Id'] = session.accountId;
     }
 
-    const result = await fetchJson(ENDPOINTS.codexUsage, { headers });
+    const result = await fetchJson(ENDPOINTS.codexUsage, { headers, cache: 'no-store' });
     if (!result.ok) return null;
 
     const usage = buildCodexUsage(result.data);
     if (!usage) return null;
 
+    usage.diagnostics = {
+      requestAccountFingerprint: await accountFingerprint(session.accountId),
+      responseAccountFingerprint: await accountFingerprint(readString(result.data.account_id)),
+    };
+
     // The expiry dates live on a separate endpoint; a failure there must not
     // cost us the usage snapshot itself.
-    const credits = await fetchJson(ENDPOINTS.codexResetCredits, { headers }).catch(() => null);
+    const credits = await fetchJson(ENDPOINTS.codexResetCredits, {
+      headers,
+      cache: 'no-store',
+    }).catch(() => null);
     usage.resets = credits?.ok ? buildCodexResets(credits.data) : [];
     return usage;
   }
 
   private static async fetchCodexSession(): Promise<CodexSessionInfo | null> {
-    const payload = await fetchJsonRaw(ENDPOINTS.codexSession);
+    const payload = await fetchJsonRaw(ENDPOINTS.codexSession, { cache: 'no-store' });
     if (!isObject(payload)) return null;
 
     const accessToken = readString(payload.accessToken);

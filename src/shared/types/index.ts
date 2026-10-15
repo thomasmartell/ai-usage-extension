@@ -51,6 +51,10 @@ export interface CodexUsage {
   availableResets: number | null;
   status: UsageStatus;
   lastUpdated: number;
+  diagnostics?: {
+    requestAccountFingerprint: string | null;
+    responseAccountFingerprint: string | null;
+  };
   raw?: Record<string, unknown>;
 }
 
