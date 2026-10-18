@@ -7,6 +7,7 @@ import {
   buildGithubUsage,
   carryBudgets,
   GithubService,
+  mapLimited,
   parseBillingItems,
   parseBudgets,
 } from '../src/background/services/GithubService';
@@ -288,6 +289,26 @@ describe('Actions minutes', () => {
       { sku: 'actions_linux_4_core', grossQuantity: 100 },
     ].map((item) => ({ product: 'actions', netAmount: 0, ...item }));
     assert.equal(actionsMinutes(items as Parameters<typeof actionsMinutes>[0]), 40);
+  });
+});
+
+describe('Bounded requests', () => {
+  it('runs at most the limit at once and keeps results in order', async () => {
+    let running = 0;
+    let peak = 0;
+    const results = await mapLimited(
+      Array.from({ length: 10 }, (_, index) => index),
+      async (index) => {
+        running += 1;
+        peak = Math.max(peak, running);
+        await new Promise((resolve) => setTimeout(resolve, (10 - index) % 3));
+        running -= 1;
+        return index * 2;
+      },
+      3,
+    );
+    assert.equal(peak, 3);
+    assert.deepEqual(results, [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
   });
 });
 

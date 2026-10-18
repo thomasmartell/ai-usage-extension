@@ -438,6 +438,31 @@ const fetchBudgets = async (base: string, token: string): Promise<Json | null> =
 
 const REPO_PAGE_LIMIT = 10;
 
+/**
+ * Requests in flight at once for per-org and per-repo lookups. GitHub asks
+ * integrators not to fire requests concurrently, and a burst across many
+ * orgs trips its secondary rate limit.
+ */
+const MAX_CONCURRENT = 4;
+
+/** `items.map(work)`, with at most `MAX_CONCURRENT` running at a time, in order. */
+export const mapLimited = async <T, R>(
+  items: T[],
+  work: (item: T) => Promise<R>,
+  limit = MAX_CONCURRENT,
+): Promise<R[]> => {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await work(items[index]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+};
+
 /** A failure worth riding out (network, rate limit, server error), not a lack of access. */
 const isTransient = (status: number): boolean => status === 0 || status === 429 || status >= 500;
 
@@ -491,17 +516,15 @@ const fetchPublicMinutes = async (
     .flatMap((repo) => readString(repo.name) ?? [])
     .filter((name) => reposWithMinutes.has(name));
 
-  const perRepo = await Promise.all(
-    publicRepos.map(async (name) => {
-      const summary = await githubGet(
-        `${base}/usage/summary?year=${year}&month=${month}&repository=${account.login}/${name}`,
-        token,
-      );
-      return summary.ok && isObject(summary.data) && Array.isArray(summary.data.usageItems)
-        ? actionsMinutes(parseBillingItems(summary.data))
-        : null;
-    }),
-  );
+  const perRepo = await mapLimited(publicRepos, async (name) => {
+    const summary = await githubGet(
+      `${base}/usage/summary?year=${year}&month=${month}&repository=${account.login}/${name}`,
+      token,
+    );
+    return summary.ok && isObject(summary.data) && Array.isArray(summary.data.usageItems)
+      ? actionsMinutes(parseBillingItems(summary.data))
+      : null;
+  });
   if (perRepo.includes(null)) return null;
   return perRepo.reduce<number>((sum, minutes) => sum + (minutes ?? 0), 0);
 };
@@ -584,28 +607,24 @@ export class GithubService {
     // Orgs whose details failed: no plan means no allowance row, so the last
     // one stands in (`carryBudgets`) rather than the meter vanishing.
     const plansMissing: string[] = [];
-    const orgAccounts = await Promise.all(
-      orgLogins.map(async (org): Promise<GithubAccount> => {
-        const details = await githubGet(`/orgs/${org}`, token);
-        if (!details.ok) plansMissing.push(org);
-        return {
-          login: org,
-          kind: 'organization',
-          plan: details.ok ? planName(details.data) : null,
-        };
-      }),
-    );
+    const orgAccounts = await mapLimited(orgLogins, async (org): Promise<GithubAccount> => {
+      const details = await githubGet(`/orgs/${org}`, token);
+      if (!details.ok) plansMissing.push(org);
+      return {
+        login: org,
+        kind: 'organization',
+        plan: details.ok ? planName(details.data) : null,
+      };
+    });
 
     const accounts: GithubAccount[] = [
       { login, kind: 'user', plan: planName(user.data) },
       ...orgAccounts,
     ];
 
-    const results = await Promise.all(
-      accounts.map((account) =>
-        fetchAccountBilling(account, token, now).catch(
-          (): Unreadable => ({ login: account.login, status: 0 }),
-        ),
+    const results = await mapLimited(accounts, (account) =>
+      fetchAccountBilling(account, token, now).catch(
+        (): Unreadable => ({ login: account.login, status: 0 }),
       ),
     );
 

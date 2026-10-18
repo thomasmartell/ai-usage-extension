@@ -162,7 +162,8 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   // own and the shorter ones, like the 5-hour session and per-model limits,
   // sit two abreast beneath it as the less pressing figures.
   const minor = windows.some((row) => row.group) ? [] : [...windows.slice(1), ...models];
-  const pairMinor = minor.length >= 2;
+  // A provider reporting only model limits has no lead row: it keeps the plain layout.
+  const pairMinor = windows.length > 0 && minor.length >= 2;
   // GitHub's hourly API allowance, until the hour it describes has passed.
   const apiLimit =
     usage && !loading && 'accounts' in usage && usage.apiLimit?.resetsAt

@@ -115,6 +115,20 @@ describe('ProviderCard layout', () => {
     assert.doesNotMatch(html, /au-divider/);
   });
 
+  it('lists model limits plainly when a provider reports no windows of its own', () => {
+    const html = render({
+      windows: [],
+      models: [
+        { id: 'a', label: 'Spark · 5h', limit: { ...limit, percentage: 4 } },
+        { id: 'b', label: 'Spark · 7d', limit: { ...limit, percentage: 9 } },
+      ],
+      status: 'ok',
+      lastUpdated: NOW,
+    });
+    assert.match(html, /Spark · 5h[^]*Spark · 7d/);
+    assert.doesNotMatch(html, /au-pair/);
+  });
+
   it('shows GitHub’s hourly API allowance until its hour has passed', () => {
     const github = (resetsAt: string) =>
       renderToStaticMarkup(
