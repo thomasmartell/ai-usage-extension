@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Track Claude and ChatGPT (Codex) session & weekly usage limits at a glance in a popup and on-page overlay. Privacy-first, no setup."
+    "message": "Track Claude and ChatGPT (Codex) session & weekly usage limits at a glance in a popup and toolbar badge. Privacy-first, no setup."
   },
   "popupEyebrow": {
     "message": "AI Capacity"
@@ -25,9 +25,6 @@
   },
   "refreshFailed": {
     "message": "Refresh failed"
-  },
-  "overlayToggleLabel": {
-    "message": "On-page overlays"
   },
   "availableResetsLabel": {
     "message": "Available resets · $1"
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "at this rate: limit ~$1 before reset"
   },
-  "settingsLabel": {
-    "message": "Settings"
-  },
   "nextResetLabel": {
     "message": "resets $1"
   },
@@ -112,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "No data yet. Open chatgpt.com while signed in, then refresh."
-  },
-  "emptyOverlay": {
-    "message": "No data yet. Open the popup and refresh."
   },
   "sourceCode": {
     "message": "Source code"
@@ -142,5 +133,131 @@
   },
   "timeMinuteShort": {
     "message": "m"
+  },
+  "emptyGithub": {
+    "message": "Sign in to see Actions minutes and budget spend for your account and organizations."
+  },
+  "githubActionsMinutes": {
+    "message": "Actions minutes"
+  },
+  "githubApiCalls": {
+    "message": "API calls this hour"
+  },
+  "githubBudget": {
+    "message": "$1 budget"
+  },
+  "githubSignIn": {
+    "message": "Sign in with GitHub"
+  },
+  "githubSignOut": {
+    "message": "Sign out"
+  },
+  "githubCancel": {
+    "message": "Cancel"
+  },
+  "githubEnterCode": {
+    "message": "Enter this code on GitHub:"
+  },
+  "githubOpenAndCopy": {
+    "message": "Copy code and open GitHub"
+  },
+  "githubWaiting": {
+    "message": "Waiting for approval…"
+  },
+  "githubSignInFailed": {
+    "message": "Sign-in didn’t finish ($1). Try again."
+  },
+  "githubSignedInAs": {
+    "message": "Signed in as $1"
+  },
+  "githubNoBilling": {
+    "message": "This account can’t read any billing usage."
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 min"
+  },
+  "githubUnreadable": {
+    "message": "Can’t read billing for $1 (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "Use a token instead"
+  },
+  "githubTokenHint": {
+    "message": "Fine-grained token owned by the organization, with read-only Administration and Plan access."
+  },
+  "githubTokenLabel": {
+    "message": "Token"
+  },
+  "githubOrgLabel": {
+    "message": "Organization"
+  },
+  "githubSaveToken": {
+    "message": "Save token"
+  },
+  "githubCreateToken": {
+    "message": "Create one on GitHub"
+  },
+  "headlineWatch": {
+    "message": "$1 limit at $2%"
+  },
+  "headlineClear": {
+    "message": "All limits comfortable"
+  },
+  "headlineHighest": {
+    "message": "highest is $1 at $2%"
+  },
+  "headlineHit": {
+    "message": "$1 limit reached"
+  },
+  "weeklyShort": {
+    "message": "weekly"
+  },
+  "monthShort": {
+    "message": "this month"
+  },
+  "resetsHeading": {
+    "message": "Resets available · $1"
+  },
+  "expiresLabel": {
+    "message": "expires $1"
+  },
+  "netlifyBuildMinutes": {
+    "message": "Build minutes"
+  },
+  "netlifyBandwidth": {
+    "message": "Bandwidth"
+  },
+  "netlifyPlanCredits": {
+    "message": "Plan credits"
+  },
+  "netlifyAddonCredits": {
+    "message": "Add-on credits"
+  },
+  "emptyNetlify": {
+    "message": "Paste a Netlify personal access token to see credits, build minutes and bandwidth."
+  },
+  "netlifyCreateToken": {
+    "message": "Create one on Netlify"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 GB"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 credits"
+  },
+  "cycleShort": {
+    "message": "this cycle"
+  },
+  "openUsagePage": {
+    "message": "Open $1 usage page"
+  },
+  "openFullView": {
+    "message": "Open full view"
+  },
+  "sectionAssistants": {
+    "message": "AI assistants"
+  },
+  "sectionServices": {
+    "message": "Developer services"
   }
 }

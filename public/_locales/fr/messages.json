@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Suivez les limites Claude et ChatGPT (Codex) par session et semaine dans le popup, le badge et l’overlay. Privé, sans configuration."
+    "message": "Suivez les limites Claude et ChatGPT (Codex) par session et semaine dans le popup et le badge. Privé, sans configuration."
   },
   "popupEyebrow": {
     "message": "Capacité IA"
@@ -25,9 +25,6 @@
   },
   "refreshFailed": {
     "message": "Échec de l’actualisation"
-  },
-  "overlayToggleLabel": {
-    "message": "Overlays sur la page"
   },
   "availableResetsLabel": {
     "message": "Réinitialisations disponibles · $1"
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "à ce rythme : limite ~$1 avant la réinitialisation"
   },
-  "settingsLabel": {
-    "message": "Paramètres"
-  },
   "nextResetLabel": {
     "message": "réinitialisation $1"
   },
@@ -112,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "Aucune donnée. Ouvrez chatgpt.com connecté, puis actualisez."
-  },
-  "emptyOverlay": {
-    "message": "Aucune donnée. Ouvrez le popup et actualisez."
   },
   "sourceCode": {
     "message": "Code source"
@@ -142,5 +133,131 @@
   },
   "timeMinuteShort": {
     "message": "min"
+  },
+  "emptyGithub": {
+    "message": "Connectez-vous pour voir les minutes Actions et les dépenses budgétaires de votre compte et de vos organisations."
+  },
+  "githubActionsMinutes": {
+    "message": "Minutes Actions"
+  },
+  "githubApiCalls": {
+    "message": "Appels API cette heure"
+  },
+  "githubBudget": {
+    "message": "Budget $1"
+  },
+  "githubSignIn": {
+    "message": "Se connecter avec GitHub"
+  },
+  "githubSignOut": {
+    "message": "Se déconnecter"
+  },
+  "githubCancel": {
+    "message": "Annuler"
+  },
+  "githubEnterCode": {
+    "message": "Saisissez ce code sur GitHub :"
+  },
+  "githubOpenAndCopy": {
+    "message": "Copier le code et ouvrir GitHub"
+  },
+  "githubWaiting": {
+    "message": "En attente d’approbation…"
+  },
+  "githubSignInFailed": {
+    "message": "La connexion n’a pas abouti ($1). Réessayez."
+  },
+  "githubSignedInAs": {
+    "message": "Connecté en tant que $1"
+  },
+  "githubNoBilling": {
+    "message": "Ce compte ne peut lire aucune donnée de facturation."
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 min"
+  },
+  "githubUnreadable": {
+    "message": "Impossible de lire la facturation de $1 (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "Utiliser un jeton"
+  },
+  "githubTokenHint": {
+    "message": "Jeton à granularité fine de l’organisation, avec accès en lecture seule à Administration et Plan."
+  },
+  "githubTokenLabel": {
+    "message": "Jeton"
+  },
+  "githubOrgLabel": {
+    "message": "Organisation"
+  },
+  "githubSaveToken": {
+    "message": "Enregistrer le jeton"
+  },
+  "githubCreateToken": {
+    "message": "En créer un sur GitHub"
+  },
+  "headlineWatch": {
+    "message": "$1 est à $2 %"
+  },
+  "headlineClear": {
+    "message": "Toutes les limites sont confortables"
+  },
+  "headlineHighest": {
+    "message": "le plus haut : $1 à $2 %"
+  },
+  "headlineHit": {
+    "message": "$1 : limite atteinte"
+  },
+  "weeklyShort": {
+    "message": "semaine"
+  },
+  "monthShort": {
+    "message": "ce mois"
+  },
+  "resetsHeading": {
+    "message": "Réinitialisations disponibles · $1"
+  },
+  "expiresLabel": {
+    "message": "expire le $1"
+  },
+  "netlifyBuildMinutes": {
+    "message": "Minutes de build"
+  },
+  "netlifyBandwidth": {
+    "message": "Bande passante"
+  },
+  "netlifyPlanCredits": {
+    "message": "Crédits du forfait"
+  },
+  "netlifyAddonCredits": {
+    "message": "Crédits supplémentaires"
+  },
+  "emptyNetlify": {
+    "message": "Collez un jeton d’accès personnel Netlify pour voir les crédits, les minutes de build et la bande passante."
+  },
+  "netlifyCreateToken": {
+    "message": "En créer un sur Netlify"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 Go"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 crédits"
+  },
+  "cycleShort": {
+    "message": "ce cycle"
+  },
+  "openUsagePage": {
+    "message": "Ouvrir la page d’utilisation de $1"
+  },
+  "openFullView": {
+    "message": "Ouvrir la vue complète"
+  },
+  "sectionAssistants": {
+    "message": "Assistants IA"
+  },
+  "sectionServices": {
+    "message": "Services développeur"
   }
 }

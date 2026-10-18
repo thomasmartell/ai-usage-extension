@@ -1,0 +1,389 @@
+import { STORAGE_KEYS } from '../../shared/constants';
+import { msg } from '../../shared/i18n';
+import type { ModelUsage, NetlifyUsage } from '../../shared/types';
+import { clampPercent, getUsageTone } from '../../shared/utils';
+import { mapLimited } from '../mapLimited';
+
+const API = 'https://api.netlify.com/api/v1';
+const BYTES_PER_GB = 1_000_000_000;
+
+type Json = Record<string, unknown>;
+
+const isObject = (value: unknown): value is Json =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const readNumber = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+const readString = (value: unknown): string | null =>
+  typeof value === 'string' && value.length > 0 ? value : null;
+
+/** A number, or a numeric string: Netlify's API model types minute allowances as strings. */
+const readAmount = (value: unknown): number | null =>
+  readNumber(typeof value === 'string' && value.trim() !== '' ? Number(value) : value);
+
+const readDate = (value: unknown): number | null => {
+  const text = readString(value);
+  const time = text ? Date.parse(text) : NaN;
+  return Number.isFinite(time) ? time : null;
+};
+
+/** One Netlify team, reduced to what its meters need. */
+export interface NetlifyAccount {
+  id: string;
+  slug: string;
+  name: string;
+  plan: string | null;
+  /** `capabilities` from the account listing (bandwidth and minute quotas). */
+  capabilities: Json;
+}
+
+export const parseAccounts = (payload: unknown): NetlifyAccount[] =>
+  (Array.isArray(payload) ? payload : []).filter(isObject).flatMap((account) => {
+    const id = readString(account.id);
+    const slug = readString(account.slug) ?? id;
+    if (!id || !slug) return [];
+    return [
+      {
+        id,
+        slug,
+        name: readString(account.name) ?? slug,
+        plan: readString(account.type_name),
+        capabilities: isObject(account.capabilities) ? account.capabilities : {},
+      },
+    ];
+  });
+
+/** A capability quota as `{ used, included }`, when the account reports one. */
+const quota = (capabilities: Json, key: string): { used: number; included: number } | null => {
+  const entry = capabilities[key];
+  if (!isObject(entry)) return null;
+  const used = readNumber(entry.used);
+  const included = readNumber(entry.included);
+  return used !== null && included !== null && included > 0 ? { used, included } : null;
+};
+
+/** The billing cycle of the plan's monthly credit allocation, when listed. */
+const planCycle = (credits: unknown): { resetsAt: string | null; windowMs?: number } => {
+  const blocks =
+    isObject(credits) && Array.isArray(credits.active_credit_blocks)
+      ? credits.active_credit_blocks
+      : [];
+  const allocation = blocks.find(
+    (block) => isObject(block) && block.subscription_allocation === true,
+  );
+  const start = isObject(allocation) ? readDate(allocation.effective_date) : null;
+  const end = isObject(allocation) ? readDate(allocation.expiry_date) : null;
+  return start !== null && end !== null && end > start
+    ? { resetsAt: new Date(end).toISOString(), windowMs: end - start }
+    : { resetsAt: null };
+};
+
+/** A `{ used, total }` credit pool from the team's credit balance. */
+const creditPool = (credits: unknown, key: string): { used: number; total: number } | null => {
+  const pool = isObject(credits) && isObject(credits[key]) ? credits[key] : null;
+  const used = pool ? readAmount(pool.used) : null;
+  const total = pool ? readAmount(pool.total) : null;
+  return used !== null && total ? { used, total } : null;
+};
+
+/**
+ * Meters for one team. Credit-based plans (current Pro and Free) spend one
+ * pool of credits on deploys, requests and bandwidth: the monthly plan
+ * allowance renews each cycle, purchased add-on credits do not expire.
+ * Legacy plans report build minutes (from the team's build status, falling
+ * back to the account's `build_minutes` capability) and bandwidth instead.
+ */
+export const buildAccountRows = (
+  account: NetlifyAccount,
+  buildStatus: unknown,
+  grouped: boolean,
+  credits: unknown = null,
+): ModelUsage[] => {
+  const rows: ModelUsage[] = [];
+  const group = grouped ? { group: account.name } : {};
+
+  // Netlify's schema types the team build status as an array of entries; the
+  // live endpoint answers with a single object. Accept either.
+  const status = Array.isArray(buildStatus)
+    ? buildStatus.find((entry) => isObject(entry) && isObject(entry.minutes))
+    : buildStatus;
+  const minutes = isObject(status) && isObject(status.minutes) ? status.minutes : {};
+  const periodStart = readDate(minutes.period_start_date);
+  const periodEnd = readDate(minutes.period_end_date);
+  const window =
+    periodStart !== null && periodEnd !== null && periodEnd > periodStart
+      ? { resetsAt: new Date(periodEnd).toISOString(), windowMs: periodEnd - periodStart }
+      : { resetsAt: null };
+
+  const plan = creditPool(credits, 'plan_credits');
+  if (plan) {
+    rows.push({
+      id: `${account.slug}:plan-credits`,
+      label: msg('netlifyPlanCredits'),
+      ...group,
+      limit: {
+        // The cycle comes from the build status; if that failed, from the
+        // plan's own credit allocation, which runs for the same cycle.
+        ...(window.resetsAt ? window : planCycle(credits)),
+        percentage: clampPercent((plan.used / plan.total) * 100),
+        used: Math.round(plan.used),
+        limit: plan.total,
+        unit: 'credits',
+      },
+    });
+  }
+
+  const addons = creditPool(credits, 'credit_addons');
+  if (addons) {
+    rows.push({
+      id: `${account.slug}:addon-credits`,
+      label: msg('netlifyAddonCredits'),
+      ...group,
+      limit: {
+        resetsAt: null,
+        percentage: clampPercent((addons.used / addons.total) * 100),
+        used: Math.round(addons.used),
+        limit: addons.total,
+        unit: 'credits',
+      },
+    });
+  }
+
+  // Credit plans charge deploys and bandwidth in credits, so any minute or
+  // bandwidth allowance still reported alongside them is not a live limit.
+  if (plan) return rows;
+
+  const fallback = quota(account.capabilities, 'build_minutes');
+  const used = readAmount(minutes.current) ?? fallback?.used ?? null;
+  const included =
+    readAmount(minutes.included_minutes_with_packs) ||
+    readAmount(minutes.included_minutes) ||
+    fallback?.included ||
+    null;
+
+  if (used !== null && included) {
+    rows.push({
+      id: `${account.slug}:build-minutes`,
+      label: msg('netlifyBuildMinutes'),
+      ...group,
+      limit: {
+        ...window,
+        percentage: clampPercent((used / included) * 100),
+        used: Math.round(used),
+        limit: included,
+        unit: 'minutes',
+      },
+    });
+  }
+
+  const bandwidth = quota(account.capabilities, 'bandwidth');
+  if (bandwidth) {
+    rows.push({
+      id: `${account.slug}:bandwidth`,
+      label: msg('netlifyBandwidth'),
+      ...group,
+      limit: {
+        ...window,
+        percentage: clampPercent((bandwidth.used / bandwidth.included) * 100),
+        used: Math.round((bandwidth.used / BYTES_PER_GB) * 10) / 10,
+        limit: Math.round(bandwidth.included / BYTES_PER_GB),
+        unit: 'gb',
+      },
+    });
+  }
+
+  return rows;
+};
+
+/**
+ * Keep a team's last credit rows when its credit lookup failed this time,
+ * and a legacy team's last meters when its build status failed, unless the
+ * cycle they belong to has ended.
+ */
+export const carryCredits = (next: NetlifyUsage, previous?: NetlifyUsage): NetlifyUsage => {
+  // The team listing failed: keep the last snapshot whole, with its own
+  // time (so the card reads as stale), and add the reason.
+  if (next.listingFailed && previous && !previous.listingFailed) {
+    return { ...previous, unreadable: next.unreadable };
+  }
+  const missing = new Set([...(next.creditsMissing ?? []), ...(next.statusMissing ?? [])]);
+  const unconfirmed = new Set(next.creditsUnconfirmed);
+  if ((missing.size === 0 && unconfirmed.size === 0) || !previous) return next;
+  // Matched on the team slug that prefixes each row id: names need not be unique.
+  const slugOf = (row: ModelUsage) => row.id.slice(0, row.id.lastIndexOf(':'));
+  // A failed lookup keeps all of a team's rows, legacy meters included; a
+  // reply without credits only brings back credit rows (see above).
+  const kept = previous.windows.filter(
+    (row) =>
+      (missing.has(slugOf(row)) ||
+        (unconfirmed.has(slugOf(row)) && row.limit.unit === 'credits')) &&
+      (row.limit.resetsAt === null || Date.parse(row.limit.resetsAt) > next.lastUpdated),
+  );
+  if (kept.length === 0) return next;
+  // A team that had credit rows keeps them in place of whatever this refresh
+  // built for it (nothing, or legacy meters from a reply without credits).
+  const replaced = new Set(kept.map(slugOf));
+  return {
+    ...next,
+    windows: [...next.windows.filter((row) => !replaced.has(slugOf(row))), ...kept],
+  };
+};
+
+/* -------------------- HTTP -------------------- */
+
+type ApiResult = { ok: true; data: unknown } | { ok: false; status: number };
+
+const netlifyGet = async (path: string, token: string): Promise<ApiResult> => {
+  const response = await fetch(`${API}${path}`, {
+    cache: 'no-store',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) return { ok: false, status: response.status };
+  return { ok: true, data: (await response.json()) as unknown };
+};
+
+/**
+ * Every page of the team listing (100 per page), merged. Any failed page,
+ * or a list still full at the page cap, fails the whole listing: a partial
+ * list would drop the teams it missed.
+ */
+const ACCOUNT_PAGE_LIMIT = 10;
+const listAccounts = async (token: string): Promise<ApiResult> => {
+  const accounts: unknown[] = [];
+  for (let page = 1; page <= ACCOUNT_PAGE_LIMIT; page += 1) {
+    const result = await netlifyGet(`/accounts?page=${page}&per_page=100`, token);
+    if (!result.ok || !Array.isArray(result.data)) return result;
+    accounts.push(...result.data);
+    if (result.data.length < 100) return { ok: true, data: accounts };
+  }
+  return { ok: true, data: null };
+};
+
+const readToken = async (): Promise<string | null> => {
+  const stored = await chrome.storage.local.get(STORAGE_KEYS.netlifyToken);
+  return readString(stored[STORAGE_KEYS.netlifyToken]);
+};
+
+const ignoreFailure = (request: Promise<ApiResult>): Promise<ApiResult | null> =>
+  request.catch(() => null);
+
+export class NetlifyService {
+  static async isSignedIn(): Promise<boolean> {
+    return (await readToken()) !== null;
+  }
+
+  /** The stored token, so a refresh can tell whether it changed meanwhile. */
+  static currentToken(): Promise<string | null> {
+    return readToken();
+  }
+
+  /** Credits, build minutes and bandwidth for every team the token can see. */
+  static async fetchUsage(
+    now = Date.now(),
+    knownToken: string | null = null,
+  ): Promise<NetlifyUsage | null> {
+    const token = knownToken ?? (await readToken());
+    if (!token) return null;
+
+    const listing = await listAccounts(token);
+    // A 200 that is not a team array is as unreadable as a failed request.
+    if (!listing.ok || !Array.isArray(listing.data)) {
+      // A revoked or expired token: drop it so the popup asks for a new one,
+      // unless a different token was saved while this request was waiting.
+      if (!listing.ok && listing.status === 401) {
+        if ((await readToken()) === token) await this.signOut();
+        return null;
+      }
+      // Reported, and marked so `carryCredits` keeps the last snapshot's teams.
+      return {
+        teams: [],
+        windows: [],
+        models: [],
+        unreadable: [{ name: 'Netlify', status: listing.ok ? 0 : listing.status }],
+        listingFailed: true,
+        status: 'ok',
+        lastUpdated: now,
+      };
+    }
+
+    const accounts = parseAccounts(listing.data);
+    // A few teams at a time, not every team's two lookups at once.
+    const details = await mapLimited(accounts, (account) =>
+      Promise.all([
+        ignoreFailure(netlifyGet(`/${account.slug}/builds/status`, token)),
+        ignoreFailure(netlifyGet(`/${account.slug}/billing/credits`, token)),
+      ]),
+    );
+
+    const unreadable: NonNullable<NetlifyUsage['unreadable']> = [];
+    const creditsMissing: string[] = [];
+    const creditsUnconfirmed: string[] = [];
+    const statusMissing: string[] = [];
+    const windows = accounts.flatMap((account, index) => {
+      const [status, credits] = details[index];
+      // A failed credit lookup is not a legacy plan: showing leftover minute
+      // allowances instead would mislead, so the last credit rows are kept
+      // (see `carryCredits`). A 404 means the team has no credit balance.
+      if (
+        !credits ||
+        (!credits.ok && credits.status !== 404) ||
+        (credits.ok && !isObject(credits.data))
+      ) {
+        const status = credits?.ok ? 0 : (credits?.status ?? 0);
+        unreadable.push({ name: account.name, status });
+        // Only a passing failure (network, rate limit, outage) keeps the last
+        // rows; a refusal (401, 403) means the figures are no longer the user's.
+        if (status === 0 || status === 429 || status >= 500) creditsMissing.push(account.slug);
+        return [];
+      }
+      // A reply without a plan-credit pool reads as a legacy plan, but a
+      // credit team's garbled reply looks the same: `carryCredits` keeps the
+      // team's last credit rows if it had any.
+      const legacy = !credits.ok || !creditPool(credits.data, 'plan_credits');
+      if (credits.ok && legacy) creditsUnconfirmed.push(account.slug);
+      // Legacy meters take their cycle from the build status alone (credit
+      // plans fall back on `planCycle`), so a failed lookup keeps their last rows.
+      if (legacy && (!status || (!status.ok && status.status !== 404)))
+        statusMissing.push(account.slug);
+      // Always under a team heading, which also carries the cycle's reset date.
+      const rows = buildAccountRows(
+        account,
+        status?.ok ? status.data : null,
+        true,
+        credits?.ok ? credits.data : null,
+      );
+      // Say why a team shows nothing: the credit balance's status (0 when the
+      // request itself failed) is what a credit-based plan depends on.
+      if (rows.length === 0) {
+        unreadable.push({ name: account.name, status: credits?.ok ? 200 : (credits?.status ?? 0) });
+      }
+      return rows;
+    });
+    const highest = Math.max(0, ...windows.map((row) => row.limit.percentage));
+
+    return {
+      teams: accounts.map(({ slug, name, plan }) => ({ slug, name, plan })),
+      windows,
+      models: [],
+      ...(unreadable.length > 0 ? { unreadable } : {}),
+      ...(creditsMissing.length > 0 ? { creditsMissing } : {}),
+      ...(creditsUnconfirmed.length > 0 ? { creditsUnconfirmed } : {}),
+      ...(statusMissing.length > 0 ? { statusMissing } : {}),
+      status: getUsageTone(highest),
+      lastUpdated: now,
+    };
+  }
+
+  /** Store a pasted personal access token after checking Netlify accepts it. */
+  static async saveToken(token: string): Promise<void> {
+    const trimmed = token.trim();
+    const user = trimmed ? await netlifyGet('/user', trimmed) : null;
+    if (!user?.ok) throw new Error('token_rejected');
+    await chrome.storage.local.set({ [STORAGE_KEYS.netlifyToken]: trimmed });
+  }
+
+  static async signOut(): Promise<void> {
+    await chrome.storage.local.remove(STORAGE_KEYS.netlifyToken);
+  }
+}

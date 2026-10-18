@@ -1,0 +1,60 @@
+import React from 'react';
+import { USAGE_THRESHOLDS } from '../../shared/constants';
+import { msg } from '../../shared/i18n';
+import type { UsageState } from '../../shared/types';
+import { peakUsage, splitLabel } from '../../shared/usageWindows';
+import { clampPercent, formatRelativeTime, formatReset, getUsageTone } from '../../shared/utils';
+
+const PROVIDERS = [
+  ['claude', 'Claude'],
+  ['codex', 'Codex'],
+  ['github', 'GitHub'],
+  ['netlify', 'Netlify'],
+] as const;
+
+interface HeadlineProps {
+  usage: UsageState;
+  now: number;
+}
+
+/** The one limit worth knowing about first, plus when the data was fetched. */
+export const Headline: React.FC<HeadlineProps> = ({ usage, now }) => {
+  const peaks = PROVIDERS.flatMap(([id, title]) => {
+    const provider = usage[id];
+    const peak = provider ? peakUsage(provider) : null;
+    return peak ? [{ title, peak, lastUpdated: provider!.lastUpdated }] : [];
+  });
+
+  if (peaks.length === 0) {
+    return <p className="au-headline__title">{msg('popupTitle')}</p>;
+  }
+
+  const top = peaks.reduce((a, b) => (b.peak.limit.percentage > a.peak.limit.percentage ? b : a));
+  const percent = clampPercent(top.peak.limit.percentage);
+  const tone = getUsageTone(percent);
+  const name = `${top.title} ${splitLabel(top.peak.label).base}`;
+  // The headline's own snapshot: a provider whose last refresh failed keeps
+  // its old one, and must not borrow a fresher provider's time.
+  const updated = top.lastUpdated;
+
+  return (
+    <div className="au-headline">
+      <p className={`au-headline__title au-headline__title--${tone}`}>
+        {percent >= 100
+          ? msg('headlineHit', name)
+          : percent >= USAGE_THRESHOLDS.warning
+            ? msg('headlineWatch', [name, String(percent)])
+            : msg('headlineClear')}
+      </p>
+      <p className="au-headline__meta">
+        {/* A pool that never resets (Netlify's add-on credits) gets no reset clause. */}
+        {percent < USAGE_THRESHOLDS.warning
+          ? `${msg('headlineHighest', [name, String(percent)])} · `
+          : top.peak.limit.resetsAt
+            ? `${msg('resetsLabel', formatReset(top.peak.limit.resetsAt, now))} · `
+            : ''}
+        {msg('updated', formatRelativeTime(updated, now))}
+      </p>
+    </div>
+  );
+};

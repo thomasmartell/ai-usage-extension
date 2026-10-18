@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "在弹窗、徽章和页面浮层中跟踪 Claude 与 ChatGPT (Codex) 的会话和每周限额。注重隐私，无需设置。"
+    "message": "在弹窗和徽章中跟踪 Claude 与 ChatGPT (Codex) 的会话和每周限额。注重隐私，无需设置。"
   },
   "popupEyebrow": {
     "message": "AI 容量"
@@ -25,9 +25,6 @@
   },
   "refreshFailed": {
     "message": "刷新失败"
-  },
-  "overlayToggleLabel": {
-    "message": "页面浮层"
   },
   "availableResetsLabel": {
     "message": "可用重置次数 · $1"
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "按此速度：将在重置前约 $1 用完"
   },
-  "settingsLabel": {
-    "message": "设置"
-  },
   "nextResetLabel": {
     "message": "$1 后重置"
   },
@@ -112,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "暂无数据。请在登录状态下打开 chatgpt.com，然后刷新。"
-  },
-  "emptyOverlay": {
-    "message": "暂无数据。请打开弹窗并刷新。"
   },
   "sourceCode": {
     "message": "源代码"
@@ -142,5 +133,131 @@
   },
   "timeMinuteShort": {
     "message": "分钟"
+  },
+  "emptyGithub": {
+    "message": "登录后可查看你的账户和组织的 Actions 分钟数及预算支出。"
+  },
+  "githubActionsMinutes": {
+    "message": "Actions 分钟数"
+  },
+  "githubApiCalls": {
+    "message": "本小时 API 调用"
+  },
+  "githubBudget": {
+    "message": "$1 预算"
+  },
+  "githubSignIn": {
+    "message": "使用 GitHub 登录"
+  },
+  "githubSignOut": {
+    "message": "退出登录"
+  },
+  "githubCancel": {
+    "message": "取消"
+  },
+  "githubEnterCode": {
+    "message": "请在 GitHub 上输入此代码："
+  },
+  "githubOpenAndCopy": {
+    "message": "复制代码并打开 GitHub"
+  },
+  "githubWaiting": {
+    "message": "正在等待批准…"
+  },
+  "githubSignInFailed": {
+    "message": "登录未完成（$1）。请重试。"
+  },
+  "githubSignedInAs": {
+    "message": "已登录为 $1"
+  },
+  "githubNoBilling": {
+    "message": "此账户无法读取任何账单数据。"
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 分钟"
+  },
+  "githubUnreadable": {
+    "message": "无法读取 $1 的账单数据（HTTP $2）"
+  },
+  "githubUseToken": {
+    "message": "改用令牌"
+  },
+  "githubTokenHint": {
+    "message": "组织拥有的细粒度令牌，Administration 和 Plan 为只读权限。"
+  },
+  "githubTokenLabel": {
+    "message": "令牌"
+  },
+  "githubOrgLabel": {
+    "message": "组织"
+  },
+  "githubSaveToken": {
+    "message": "保存令牌"
+  },
+  "githubCreateToken": {
+    "message": "在 GitHub 上创建"
+  },
+  "headlineWatch": {
+    "message": "$1 已达 $2%"
+  },
+  "headlineClear": {
+    "message": "所有限额都很充裕"
+  },
+  "headlineHighest": {
+    "message": "最高为 $1，$2%"
+  },
+  "headlineHit": {
+    "message": "$1 已达上限"
+  },
+  "weeklyShort": {
+    "message": "每周"
+  },
+  "monthShort": {
+    "message": "本月"
+  },
+  "resetsHeading": {
+    "message": "可用重置 · $1"
+  },
+  "expiresLabel": {
+    "message": "$1 到期"
+  },
+  "netlifyBuildMinutes": {
+    "message": "构建分钟数"
+  },
+  "netlifyBandwidth": {
+    "message": "带宽"
+  },
+  "netlifyPlanCredits": {
+    "message": "套餐额度"
+  },
+  "netlifyAddonCredits": {
+    "message": "附加额度"
+  },
+  "emptyNetlify": {
+    "message": "粘贴 Netlify 个人访问令牌，即可查看额度、构建分钟数和带宽。"
+  },
+  "netlifyCreateToken": {
+    "message": "在 Netlify 上创建"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 GB"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 额度"
+  },
+  "cycleShort": {
+    "message": "本周期"
+  },
+  "openUsagePage": {
+    "message": "打开 $1 用量页面"
+  },
+  "openFullView": {
+    "message": "打开完整视图"
+  },
+  "sectionAssistants": {
+    "message": "AI 助手"
+  },
+  "sectionServices": {
+    "message": "开发者服务"
   }
 }

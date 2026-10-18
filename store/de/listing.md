@@ -6,20 +6,18 @@ AI Usage Tracker: Claude- & Codex-Limits
 
 ## Short Description
 
-Verfolge Claude- und ChatGPT-(Codex)-Limits pro Sitzung und Woche in Popup, Badge und Overlay. Privat, ohne Einrichtung.
+Verfolge Claude- und ChatGPT-(Codex)-Limits pro Sitzung und Woche in Popup und Badge. Privat, ohne Einrichtung.
 
 ## Full Description
 
-AI Usage Tracker: Claude- & Codex-Limits ist eine Browser-Erweiterung für Menschen, die eine klarere und besser vorhersehbare Erfahrung mit KI-Assistenten möchten. Verfolge deine Nachrichtenlimits, sieh Echtzeit-Countdowns und zeige unaufdringliche Nutzungsanzeigen direkt auf den Anbieterseiten an, damit du dich auf deine Arbeit konzentrieren kannst, ohne plötzlich an Limits zu stoßen.
+AI Usage Tracker: Claude- & Codex-Limits ist eine Browser-Erweiterung für Menschen, die eine klarere und besser vorhersehbare Erfahrung mit KI-Assistenten möchten. Verfolge deine Nachrichtenlimits und sieh Echtzeit-Countdowns direkt in der Symbolleiste, damit du dich auf deine Arbeit konzentrieren kannst, ohne plötzlich an Limits zu stoßen.
 
-Ob du Claude und ChatGPT zum Programmieren, Schreiben, Recherchieren oder für tiefgehende Problemlösungen nutzt: AI Usage Tracker reduziert die Reibung durch Limit-Blockaden und gibt dir direkte Kontrolle darüber, wie deine Kapazität überwacht wird. Du entscheidest, wo das Overlay erscheint und wie du deine Limits verfolgst.
+Ob du Claude und ChatGPT zum Programmieren, Schreiben, Recherchieren oder für tiefgehende Problemlösungen nutzt: AI Usage Tracker reduziert die Reibung durch Limit-Blockaden und gibt dir direkte Kontrolle darüber, wie deine Kapazität überwacht wird.
 
 Wichtige Funktionen:
 
 - Echtzeit-Limitverfolgung für Claude (claude.ai) und ChatGPT/Codex (chatgpt.com)
 - Toolbar-Badge, das deinen höchsten aktuellen Nutzungsprozentsatz auf einen Blick zeigt
-- Kontextuelle Overlays auf der Seite, direkt neben den Chat-Eingabefeldern positioniert
-- Einklappbares Capsule-Widget im Shadow DOM, um Konflikte mit den Styles der Host-Seite zu vermeiden
 - Kapazitätsüberwachung für Sitzungen (5 Stunden) und Wochenlimits (7 Tage)
 - Live-Countdowns, die genau anzeigen, wann deine Limits zurückgesetzt werden
 - Aktualisierung per Button und automatische Hintergrundsynchronisierung alle 5 Minuten
@@ -46,4 +44,4 @@ claude nutzung, claude limits, chatgpt limits, codex nutzung, ai usage tracker, 
 
 ## Single Purpose
 
-Sitzungs- und Wochenlimits der angemeldeten Claude- und ChatGPT/Codex-Konten im Popup, Toolbar-Badge und Seiten-Overlay anzeigen.
+Sitzungs- und Wochenlimits der angemeldeten Claude- und ChatGPT/Codex-Konten im Popup und Toolbar-Badge anzeigen.

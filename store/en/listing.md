@@ -6,20 +6,18 @@ AI Usage Tracker: Claude & Codex Limits
 
 ## Short Description
 
-Track Claude and ChatGPT (Codex) session & weekly usage limits at a glance in a popup and on-page overlay. Privacy-first, no setup.
+Track Claude and ChatGPT (Codex) session & weekly usage limits at a glance in a popup and toolbar badge. Privacy-first, no setup.
 
 ## Full Description
 
-AI Usage Tracker: Claude & Codex Limits is a browser extension for people who want a clearer, more predictable AI assistant experience. Track your message limits, view real-time countdowns, and display unobtrusive usage meters directly on provider pages so you can focus on your work without hitting sudden limits.
+AI Usage Tracker: Claude & Codex Limits is a browser extension for people who want a clearer, more predictable AI assistant experience. Track your message limits and view real-time countdowns from your toolbar so you can focus on your work without hitting sudden limits.
 
-Whether you use Claude and ChatGPT for coding, writing, research, or deep problem-solving, AI Usage Tracker helps reduce the friction of hitting limit blocks and gives you direct control over how your capacity is monitored. You choose where the overlay appears and how you track your limits.
+Whether you use Claude and ChatGPT for coding, writing, research, or deep problem-solving, AI Usage Tracker helps reduce the friction of hitting limit blocks and gives you direct control over how your capacity is monitored.
 
 Key features:
 
 - Real-time limit tracking for Claude (claude.ai) and ChatGPT/Codex (chatgpt.com)
 - At-a-glance toolbar badge showing your highest current usage percentage
-- Contextual on-page overlays positioned right next to chat inputs
-- Collapsible capsule widget in Shadow DOM to prevent host page style clashes
 - Session-based (5-hour) and weekly (7-day) capacity monitoring
 - Live countdowns showing precisely when your limits will reset
 - On-demand refresh button and automatic background syncing every 5 minutes
@@ -46,4 +44,4 @@ claude usage, claude limits, chatgpt limits, codex usage, ai usage tracker, rate
 
 ## Single Purpose
 
-Display session and weekly usage limits for the signed-in user's Claude and ChatGPT/Codex accounts in the extension popup, toolbar badge, and provider-page overlay.
+Display session and weekly usage limits for the signed-in user's Claude and ChatGPT/Codex accounts in the extension popup and toolbar badge.

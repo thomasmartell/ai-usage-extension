@@ -31,8 +31,8 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['@sidepanel/*', '@content/*', '@background/*'],
-              message: 'The shared layer must not depend on sidepanel/content/background.',
+              group: ['@sidepanel/*', '@background/*'],
+              message: 'The shared layer must not depend on sidepanel/background.',
             },
           ],
         },
@@ -47,24 +47,8 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['@content/*', '@background/*'],
-              message: 'The sidepanel layer must not directly depend on content/background.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    files: ['src/content/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['@sidepanel/*', '@background/*'],
-              message: 'The content layer must not directly depend on sidepanel/background.',
+              group: ['@background/*'],
+              message: 'The sidepanel layer must not directly depend on background.',
             },
           ],
         },
@@ -79,8 +63,8 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['@sidepanel/*', '@content/*'],
-              message: 'The background layer must not directly depend on sidepanel/content.',
+              group: ['@sidepanel/*'],
+              message: 'The background layer must not directly depend on sidepanel.',
             },
           ],
         },

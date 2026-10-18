@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Отслеживайте лимиты Claude и ChatGPT (Codex) за сессию и неделю в попапе, бейдже и оверлее. Приватно, без настройки."
+    "message": "Отслеживайте лимиты Claude и ChatGPT (Codex) за сессию и неделю в попапе и бейдже. Приватно, без настройки."
   },
   "popupEyebrow": {
     "message": "AI-лимиты"
@@ -25,9 +25,6 @@
   },
   "refreshFailed": {
     "message": "Ошибка обновления"
-  },
-  "overlayToggleLabel": {
-    "message": "Оверлеи на страницах"
   },
   "availableResetsLabel": {
     "message": "Доступно сбросов · $1"
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "при таком темпе: лимит ~$1 до сброса"
   },
-  "settingsLabel": {
-    "message": "Настройки"
-  },
   "nextResetLabel": {
     "message": "сброс $1"
   },
@@ -112,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "Данных пока нет. Откройте chatgpt.com под своим аккаунтом и обновите."
-  },
-  "emptyOverlay": {
-    "message": "Данных пока нет. Откройте попап и обновите."
   },
   "sourceCode": {
     "message": "Исходный код"
@@ -142,5 +133,131 @@
   },
   "timeMinuteShort": {
     "message": "м"
+  },
+  "emptyGithub": {
+    "message": "Войдите, чтобы видеть минуты Actions и расходы бюджета для вашего аккаунта и организаций."
+  },
+  "githubActionsMinutes": {
+    "message": "Минуты Actions"
+  },
+  "githubApiCalls": {
+    "message": "Вызовы API за этот час"
+  },
+  "githubBudget": {
+    "message": "Бюджет $1"
+  },
+  "githubSignIn": {
+    "message": "Войти через GitHub"
+  },
+  "githubSignOut": {
+    "message": "Выйти"
+  },
+  "githubCancel": {
+    "message": "Отмена"
+  },
+  "githubEnterCode": {
+    "message": "Введите этот код на GitHub:"
+  },
+  "githubOpenAndCopy": {
+    "message": "Скопировать код и открыть GitHub"
+  },
+  "githubWaiting": {
+    "message": "Ожидание подтверждения…"
+  },
+  "githubSignInFailed": {
+    "message": "Вход не завершён ($1). Попробуйте ещё раз."
+  },
+  "githubSignedInAs": {
+    "message": "Вы вошли как $1"
+  },
+  "githubNoBilling": {
+    "message": "Этот аккаунт не может читать данные о расходах."
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 мин"
+  },
+  "githubUnreadable": {
+    "message": "Не удаётся прочитать расходы $1 (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "Использовать токен"
+  },
+  "githubTokenHint": {
+    "message": "Детализированный токен организации с доступом только на чтение к Administration и Plan."
+  },
+  "githubTokenLabel": {
+    "message": "Токен"
+  },
+  "githubOrgLabel": {
+    "message": "Организация"
+  },
+  "githubSaveToken": {
+    "message": "Сохранить токен"
+  },
+  "githubCreateToken": {
+    "message": "Создать на GitHub"
+  },
+  "headlineWatch": {
+    "message": "$1: $2%"
+  },
+  "headlineClear": {
+    "message": "Все лимиты в норме"
+  },
+  "headlineHighest": {
+    "message": "максимум: $1 — $2%"
+  },
+  "headlineHit": {
+    "message": "$1: лимит исчерпан"
+  },
+  "weeklyShort": {
+    "message": "неделя"
+  },
+  "monthShort": {
+    "message": "этот месяц"
+  },
+  "resetsHeading": {
+    "message": "Доступные сбросы · $1"
+  },
+  "expiresLabel": {
+    "message": "истекает $1"
+  },
+  "netlifyBuildMinutes": {
+    "message": "Минуты сборки"
+  },
+  "netlifyBandwidth": {
+    "message": "Трафик"
+  },
+  "netlifyPlanCredits": {
+    "message": "Кредиты тарифа"
+  },
+  "netlifyAddonCredits": {
+    "message": "Дополнительные кредиты"
+  },
+  "emptyNetlify": {
+    "message": "Вставьте персональный токен доступа Netlify, чтобы видеть кредиты, минуты сборки и трафик."
+  },
+  "netlifyCreateToken": {
+    "message": "Создать в Netlify"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 ГБ"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 кредитов"
+  },
+  "cycleShort": {
+    "message": "этот период"
+  },
+  "openUsagePage": {
+    "message": "Открыть страницу использования $1"
+  },
+  "openFullView": {
+    "message": "Открыть полный вид"
+  },
+  "sectionAssistants": {
+    "message": "ИИ-ассистенты"
+  },
+  "sectionServices": {
+    "message": "Сервисы для разработчиков"
   }
 }

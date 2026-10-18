@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Claude と ChatGPT (Codex) のセッション・週間上限をポップアップ、バッジ、オーバーレイで確認。プライバシー重視、設定不要。"
+    "message": "Claude と ChatGPT (Codex) のセッション・週間上限をポップアップとバッジで確認。プライバシー重視、設定不要。"
   },
   "popupEyebrow": {
     "message": "AI 容量"
@@ -25,9 +25,6 @@
   },
   "refreshFailed": {
     "message": "更新に失敗しました"
-  },
-  "overlayToggleLabel": {
-    "message": "ページ内オーバーレイ"
   },
   "availableResetsLabel": {
     "message": "利用可能なリセット回数 · $1"
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "このペースでは: リセットの約$1前に上限"
   },
-  "settingsLabel": {
-    "message": "設定"
-  },
   "nextResetLabel": {
     "message": "リセット $1"
   },
@@ -112,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "まだデータがありません。ログイン済みの chatgpt.com を開いて更新してください。"
-  },
-  "emptyOverlay": {
-    "message": "まだデータがありません。ポップアップを開いて更新してください。"
   },
   "sourceCode": {
     "message": "ソースコード"
@@ -142,5 +133,131 @@
   },
   "timeMinuteShort": {
     "message": "分"
+  },
+  "emptyGithub": {
+    "message": "サインインすると、アカウントと組織の Actions 分数と予算の使用額が表示されます。"
+  },
+  "githubActionsMinutes": {
+    "message": "Actions 分数"
+  },
+  "githubApiCalls": {
+    "message": "今時間の API 呼び出し"
+  },
+  "githubBudget": {
+    "message": "$1 予算"
+  },
+  "githubSignIn": {
+    "message": "GitHub でサインイン"
+  },
+  "githubSignOut": {
+    "message": "サインアウト"
+  },
+  "githubCancel": {
+    "message": "キャンセル"
+  },
+  "githubEnterCode": {
+    "message": "GitHub でこのコードを入力してください:"
+  },
+  "githubOpenAndCopy": {
+    "message": "コードをコピーして GitHub を開く"
+  },
+  "githubWaiting": {
+    "message": "承認を待っています…"
+  },
+  "githubSignInFailed": {
+    "message": "サインインが完了しませんでした ($1)。もう一度お試しください。"
+  },
+  "githubSignedInAs": {
+    "message": "$1 としてサインイン中"
+  },
+  "githubNoBilling": {
+    "message": "このアカウントは請求データを読み取れません。"
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 分"
+  },
+  "githubUnreadable": {
+    "message": "$1 の請求データを読み取れません (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "代わりにトークンを使う"
+  },
+  "githubTokenHint": {
+    "message": "組織が所有する Fine-grained トークン（Administration と Plan は読み取り専用）。"
+  },
+  "githubTokenLabel": {
+    "message": "トークン"
+  },
+  "githubOrgLabel": {
+    "message": "組織"
+  },
+  "githubSaveToken": {
+    "message": "トークンを保存"
+  },
+  "githubCreateToken": {
+    "message": "GitHub で作成"
+  },
+  "headlineWatch": {
+    "message": "$1 は $2% です"
+  },
+  "headlineClear": {
+    "message": "すべての上限に余裕があります"
+  },
+  "headlineHighest": {
+    "message": "最大は $1 の $2%"
+  },
+  "headlineHit": {
+    "message": "$1 の上限に達しました"
+  },
+  "weeklyShort": {
+    "message": "週間"
+  },
+  "monthShort": {
+    "message": "今月"
+  },
+  "resetsHeading": {
+    "message": "利用可能なリセット · $1"
+  },
+  "expiresLabel": {
+    "message": "$1 に失効"
+  },
+  "netlifyBuildMinutes": {
+    "message": "ビルド時間（分）"
+  },
+  "netlifyBandwidth": {
+    "message": "帯域幅"
+  },
+  "netlifyPlanCredits": {
+    "message": "プランのクレジット"
+  },
+  "netlifyAddonCredits": {
+    "message": "追加クレジット"
+  },
+  "emptyNetlify": {
+    "message": "Netlify の個人アクセストークンを貼り付けると、クレジット、ビルド時間、帯域幅を表示します。"
+  },
+  "netlifyCreateToken": {
+    "message": "Netlify で作成"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 GB"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 クレジット"
+  },
+  "cycleShort": {
+    "message": "今期"
+  },
+  "openUsagePage": {
+    "message": "$1 の使用状況ページを開く"
+  },
+  "openFullView": {
+    "message": "全画面表示を開く"
+  },
+  "sectionAssistants": {
+    "message": "AI アシスタント"
+  },
+  "sectionServices": {
+    "message": "開発者サービス"
   }
 }

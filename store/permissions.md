@@ -12,15 +12,15 @@ not for ourselves.
 ## storage
 
 The extension persists the most recent usage snapshot, the cached Claude
-organization id, and the user's overlay preferences in `chrome.storage.local`
-so they survive service worker restarts and tab reloads. Nothing is read from
+organization id, and the GitHub and Netlify tokens the user pastes in
+`chrome.storage.local` so they survive service worker restarts and tab reloads. Nothing is read from
 or written to any other storage backend.
 
 ## alarms
 
 A single recurring `chrome.alarms` entry wakes the service worker every five
-minutes to re-fetch the usage limits. Without it the on-page overlay would
-only update while the popup was open, which defeats the at-a-glance use case.
+minutes to re-fetch the usage limits. Without it the toolbar icon would only
+update while the popup was open, which defeats the at-a-glance use case.
 
 ## cookies
 
@@ -33,19 +33,34 @@ read, never written.
 
 Required to call the authenticated Claude usage endpoints
 (`/api/organizations` and `/api/organizations/{id}/usage`) with the user's
-existing session cookies, and to mount the on-page overlay next to the chat
-input. No requests are made to any other path on this host.
+existing session cookies. No requests are made to any other path on this host.
 
 ## host: https://chatgpt.com/*
 
 Required to call `/api/auth/session` (to obtain the short-lived access token
 the chatgpt.com web app already uses) and `/backend-api/wham/usage` (the rate
-limit endpoint), and to mount the on-page overlay on the Codex chat surface.
-No other endpoints are accessed.
+limit endpoint). No other endpoints are accessed.
 
-## host: https://chat.openai.com/*
+## host: https://api.github.com/*
 
-The legacy ChatGPT host that still resolves for some accounts. Same usage as
-`chatgpt.com` above: reading the user's own rate-limit data via their existing
-session and rendering the on-page overlay. Kept so signed-in users who land on
-the legacy domain see the same experience.
+Optional GitHub tracking. After the user signs in, the extension reads their
+own monthly billing usage (`/users/{login}/settings/billing/usage/summary`),
+the organizations they belong to, and, for organizations they administer, the
+billing usage summary and budgets. Requests carry the token the user granted
+(device sign-in asks for `read:org` and `user`; for organizations the user can
+instead paste a fine-grained token with read-only Administration access). The
+extension only ever sends GET requests to this host.
+
+## host: https://github.com/login/*
+
+Used only for GitHub's OAuth device flow: `/login/device/code` issues the
+one-time code the user enters on github.com, and `/login/oauth/access_token`
+returns the token once they approve it. No other path on this host is called.
+
+## host: https://api.netlify.com/*
+
+Optional Netlify tracking. With a personal access token the user pastes, the
+extension reads their teams (`/api/v1/accounts`), each team's credit balance
+(`/api/v1/{team}/billing/credits`) and build status
+(`/api/v1/{team}/builds/status`) to show credits, build minutes and bandwidth
+used this billing cycle. It only sends GET requests and never changes anything.

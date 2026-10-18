@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Consulta límites de Claude y ChatGPT (Codex) por sesión y semana en popup, insignia y superposición. Privado y sin configuración."
+    "message": "Consulta límites de Claude y ChatGPT (Codex) por sesión y semana en popup e insignia. Privado y sin configuración."
   },
   "popupEyebrow": {
     "message": "Capacidad de IA"
@@ -25,9 +25,6 @@
   },
   "refreshFailed": {
     "message": "Error al actualizar"
-  },
-  "overlayToggleLabel": {
-    "message": "Superposiciones en página"
   },
   "availableResetsLabel": {
     "message": "Reinicios disponibles · $1"
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "a este ritmo: límite ~$1 antes del reinicio"
   },
-  "settingsLabel": {
-    "message": "Ajustes"
-  },
   "nextResetLabel": {
     "message": "se reinicia $1"
   },
@@ -112,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "Aún no hay datos. Abre chatgpt.com con sesión iniciada y actualiza."
-  },
-  "emptyOverlay": {
-    "message": "Aún no hay datos. Abre el popup y actualiza."
   },
   "sourceCode": {
     "message": "Código fuente"
@@ -142,5 +133,131 @@
   },
   "timeMinuteShort": {
     "message": "min"
+  },
+  "emptyGithub": {
+    "message": "Inicia sesión para ver los minutos de Actions y el gasto de presupuesto de tu cuenta y organizaciones."
+  },
+  "githubActionsMinutes": {
+    "message": "Minutos de Actions"
+  },
+  "githubApiCalls": {
+    "message": "Llamadas a la API esta hora"
+  },
+  "githubBudget": {
+    "message": "Presupuesto de $1"
+  },
+  "githubSignIn": {
+    "message": "Iniciar sesión con GitHub"
+  },
+  "githubSignOut": {
+    "message": "Cerrar sesión"
+  },
+  "githubCancel": {
+    "message": "Cancelar"
+  },
+  "githubEnterCode": {
+    "message": "Introduce este código en GitHub:"
+  },
+  "githubOpenAndCopy": {
+    "message": "Copiar código y abrir GitHub"
+  },
+  "githubWaiting": {
+    "message": "Esperando aprobación…"
+  },
+  "githubSignInFailed": {
+    "message": "El inicio de sesión no terminó ($1). Inténtalo de nuevo."
+  },
+  "githubSignedInAs": {
+    "message": "Sesión iniciada como $1"
+  },
+  "githubNoBilling": {
+    "message": "Esta cuenta no puede leer datos de facturación."
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 min"
+  },
+  "githubUnreadable": {
+    "message": "No se puede leer la facturación de $1 (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "Usar un token"
+  },
+  "githubTokenHint": {
+    "message": "Token detallado de la organización con acceso de solo lectura a Administration y Plan."
+  },
+  "githubTokenLabel": {
+    "message": "Token"
+  },
+  "githubOrgLabel": {
+    "message": "Organización"
+  },
+  "githubSaveToken": {
+    "message": "Guardar token"
+  },
+  "githubCreateToken": {
+    "message": "Crear uno en GitHub"
+  },
+  "headlineWatch": {
+    "message": "$1 está al $2 %"
+  },
+  "headlineClear": {
+    "message": "Todos los límites holgados"
+  },
+  "headlineHighest": {
+    "message": "el más alto es $1 con $2 %"
+  },
+  "headlineHit": {
+    "message": "$1: límite alcanzado"
+  },
+  "weeklyShort": {
+    "message": "semanal"
+  },
+  "monthShort": {
+    "message": "este mes"
+  },
+  "resetsHeading": {
+    "message": "Reinicios disponibles · $1"
+  },
+  "expiresLabel": {
+    "message": "caduca $1"
+  },
+  "netlifyBuildMinutes": {
+    "message": "Minutos de compilación"
+  },
+  "netlifyBandwidth": {
+    "message": "Ancho de banda"
+  },
+  "netlifyPlanCredits": {
+    "message": "Créditos del plan"
+  },
+  "netlifyAddonCredits": {
+    "message": "Créditos adicionales"
+  },
+  "emptyNetlify": {
+    "message": "Pega un token de acceso personal de Netlify para ver créditos, minutos de compilación y ancho de banda."
+  },
+  "netlifyCreateToken": {
+    "message": "Crear uno en Netlify"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 GB"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 créditos"
+  },
+  "cycleShort": {
+    "message": "este ciclo"
+  },
+  "openUsagePage": {
+    "message": "Abrir la página de uso de $1"
+  },
+  "openFullView": {
+    "message": "Abrir vista completa"
+  },
+  "sectionAssistants": {
+    "message": "Asistentes de IA"
+  },
+  "sectionServices": {
+    "message": "Servicios para desarrolladores"
   }
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { msg } from '../../shared/i18n';
 import { paceFromLimit } from '../../shared/pace';
 import type { UsageLimit } from '../../shared/types';
-import { formatDuration, formatReset } from '../../shared/utils';
+import { formatCount, formatDuration, formatReset } from '../../shared/utils';
 import { ProgressBar } from './ProgressBar';
 
 interface UsageMetricProps {
@@ -10,6 +10,8 @@ interface UsageMetricProps {
   limit: UsageLimit;
   /** Reset of a sibling window folded into this row. */
   secondaryResetsAt?: string | null;
+  /** False when a heading above already says when this row resets. */
+  showReset?: boolean;
   now: number;
 }
 
@@ -18,6 +20,7 @@ export const UsageMetric: React.FC<UsageMetricProps> = ({
   label,
   limit,
   secondaryResetsAt,
+  showReset = true,
   now,
 }) => {
   const hasCount =
@@ -28,22 +31,15 @@ export const UsageMetric: React.FC<UsageMetricProps> = ({
     <div className="au-metric">
       <ProgressBar label={label} percentage={limit.percentage} pace={pace} />
       <p className="au-meta">
-        {hasCount && (
-          <>
-            <span>
-              {limit.used} / {limit.limit}
-            </span>
-            {' · '}
-          </>
-        )}
-        {pace && (
-          <>
-            {msg('paceElapsedLabel', String(pace.elapsedPct))}
-            {' · '}
-          </>
-        )}
-        {msg('resetsLabel', formatReset(limit.resetsAt, now))}
-        {secondaryResetsAt && ` / ${formatReset(secondaryResetsAt, now)}`}
+        {[
+          hasCount && <span key="count">{formatCount(limit)}</span>,
+          pace && msg('paceElapsedLabel', String(pace.elapsedPct)),
+          showReset &&
+            msg('resetsLabel', formatReset(limit.resetsAt, now)) +
+              (secondaryResetsAt ? ` / ${formatReset(secondaryResetsAt, now)}` : ''),
+        ]
+          .filter(Boolean)
+          .flatMap((part, index) => (index === 0 ? [part] : [' · ', part]))}
       </p>
       {pace && pace.projectedEarlyMs !== null && (
         <p className="au-projection">

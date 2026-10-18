@@ -25,7 +25,6 @@ export default defineConfig(({ mode }) => ({
 		alias: {
 			'@sidepanel': resolve(__dirname, 'src/sidepanel'),
 			'@background': resolve(__dirname, 'src/background'),
-			'@content': resolve(__dirname, 'src/content'),
 			'@shared': resolve(__dirname, 'src/shared'),
 		},
 	},

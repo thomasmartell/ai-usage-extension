@@ -29,9 +29,6 @@
       "@background/*": [
         "src/background/*"
       ],
-      "@content/*": [
-        "src/content/*"
-      ],
       "@shared/*": [
         "src/shared/*"
       ]

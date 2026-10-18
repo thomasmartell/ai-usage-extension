@@ -1,0 +1,987 @@
+import assert from 'node:assert/strict';
+import { afterEach, beforeEach, describe, it, mock } from 'node:test';
+import { mapLimited } from '../src/background/mapLimited';
+import {
+  actionsMinutes,
+  billingMonth,
+  buildAccountRows,
+  buildGithubUsage,
+  carryBudgets,
+  GithubService,
+  parseBillingItems,
+  parseBudgets,
+} from '../src/background/services/GithubService';
+
+// Synthetic billing values in the shape of GitHub's usage summary; no account data or tokens.
+const NOW = Date.UTC(2026, 9, 18, 12);
+
+const summary = {
+  usageItems: [
+    { product: 'Actions', sku: 'actions_linux', grossQuantity: 18223, netAmount: 0 },
+    { product: 'Actions', sku: 'actions_macos', grossQuantity: 26, netAmount: 0 },
+    { product: 'Actions', sku: 'actions_storage', grossQuantity: 39.1, netAmount: 0 },
+    { product: 'Copilot', sku: 'copilot_ai_unit', grossQuantity: 100, netAmount: 4.256 },
+  ],
+};
+
+const budgets = {
+  budgets: [
+    { budget_product_sku: 'actions', budget_amount: 50 },
+    { budget_product_sku: 'ai_credits', budget_amount: 50 },
+    { budget_product_sku: 'codespaces', budget_amount: 0 },
+  ],
+};
+
+const org = { login: 'acme', kind: 'organization' as const, plan: 'enterprise' };
+
+describe('GitHub billing rows', () => {
+  it('bills by UTC calendar month', () => {
+    const month = billingMonth(NOW);
+    assert.equal(month.year, 2026);
+    assert.equal(month.month, 10);
+    assert.equal(new Date(month.end).toISOString(), '2026-11-01T00:00:00.000Z');
+  });
+
+  it('counts runner minutes at their multipliers against the plan allowance', () => {
+    const [minutes] = buildAccountRows(
+      { account: org, items: parseBillingItems(summary), budgets: [] },
+      NOW,
+    );
+    // 18,223 Linux + 26 macOS × 10; storage is not minutes.
+    assert.equal(minutes.limit.used, 18483);
+    assert.equal(minutes.limit.limit, 50000);
+    assert.equal(minutes.limit.percentage, 37);
+    assert.equal(minutes.limit.unit, 'minutes');
+    assert.equal(minutes.limit.resetsAt, '2026-11-01T00:00:00.000Z');
+    assert.equal(minutes.limit.windowMs, 31 * 24 * 60 * 60 * 1000);
+    assert.equal(minutes.label, 'Actions minutes');
+    assert.equal(minutes.group, 'acme');
+  });
+
+  it('meters spend against each non-zero budget and skips zero caps', () => {
+    const rows = buildAccountRows(
+      { account: org, items: parseBillingItems(summary), budgets: parseBudgets(budgets, 'acme') },
+      NOW,
+    );
+    assert.deepEqual(
+      rows.map((row) => [row.label, row.limit.used, row.limit.limit, row.limit.percentage]),
+      [
+        ['Actions minutes', 18483, 50000, 37],
+        ['Actions budget', 0, 50, 0],
+        ['AI credits budget', 4.26, 50, 9],
+      ],
+    );
+    assert.equal(rows[1].limit.unit, 'usd');
+  });
+
+  it('accepts budgets listed with a SKU array', () => {
+    assert.deepEqual(
+      parseBudgets(
+        { budgets: [{ budget_product_skus: ['actions', 'packages'], budget_amount: 20 }] },
+        'acme',
+      ),
+      [{ sku: 'actions+packages', skus: ['actions', 'packages'], amount: 20 }],
+    );
+  });
+
+  it('meters a budget covering several products as one row', () => {
+    const [budget] = parseBudgets(
+      {
+        budgets: [{ id: 'b2', budget_product_skus: ['actions', 'ai_credits'], budget_amount: 20 }],
+      },
+      'acme',
+    );
+    const rows = buildAccountRows(
+      { account: { ...org, plan: null }, items: parseBillingItems(summary), budgets: [budget] },
+      NOW,
+    );
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].label, 'Actions + AI credits budget');
+    // No consumed figure: the products' summed spend.
+    assert.equal(rows[0].limit.used, 4.26);
+    const [own] = buildAccountRows(
+      {
+        account: { ...org, plan: null },
+        items: parseBillingItems(summary),
+        budgets: [{ ...budget, consumed: 1 }],
+      },
+      NOW,
+    );
+    assert.equal(own.limit.used, 1);
+  });
+
+  it('leaves free public-repository minutes out of the allowance', () => {
+    const [minutes] = buildAccountRows(
+      { account: org, items: parseBillingItems(summary), budgets: [], publicMinutes: 483 },
+      NOW,
+    );
+    assert.equal(minutes.limit.used, 18000);
+    assert.equal(minutes.limit.percentage, 36);
+  });
+
+  it('keeps only organization-wide budgets for this org', () => {
+    const parsed = parseBudgets(
+      {
+        budgets: [
+          {
+            budget_product_sku: 'actions',
+            budget_amount: 50,
+            budget_scope: 'organization',
+            budget_entity_name: 'acme',
+          },
+          {
+            budget_product_sku: 'actions',
+            budget_amount: 5,
+            budget_scope: 'repository',
+            budget_entity_name: 'acme/app',
+          },
+          {
+            budget_product_sku: 'actions',
+            budget_amount: 9,
+            budget_scope: 'cost_center',
+            budget_entity_name: 'ops',
+          },
+          {
+            budget_product_sku: 'actions',
+            budget_amount: 7,
+            budget_scope: 'organization',
+            budget_entity_name: 'other',
+          },
+        ],
+      },
+      'acme',
+    );
+    assert.deepEqual(parsed, [{ sku: 'actions', amount: 50 }]);
+  });
+
+  it('meters a single-SKU budget against that SKU only', () => {
+    const rows = buildAccountRows(
+      {
+        account: org,
+        items: [
+          { product: 'Actions', sku: 'actions_linux', grossQuantity: 100, netAmount: 3 },
+          { product: 'Actions', sku: 'actions_macos', grossQuantity: 10, netAmount: 6 },
+        ],
+        budgets: parseBudgets(
+          {
+            budgets: [
+              { budget_type: 'SkuPricing', budget_product_sku: 'actions_linux', budget_amount: 30 },
+            ],
+          },
+          'acme',
+        ),
+      },
+      NOW,
+    );
+    assert.equal(rows[1].limit.used, 3);
+    assert.equal(rows[1].limit.percentage, 10);
+  });
+
+  it('gives Enterprise Cloud plan identifiers the Enterprise allowance', () => {
+    for (const plan of ['business_plus', 'business']) {
+      const [minutes] = buildAccountRows(
+        { account: { ...org, plan }, items: parseBillingItems(summary), budgets: [] },
+        NOW,
+      );
+      assert.equal(minutes.limit.limit, 50000, plan);
+    }
+  });
+
+  it('omits the minutes row when the plan allowance is unknown', () => {
+    const rows = buildAccountRows(
+      { account: { ...org, plan: null }, items: parseBillingItems(summary), budgets: [] },
+      NOW,
+    );
+    assert.deepEqual(rows, []);
+  });
+
+  it('lists organizations before the personal account and takes the worst tone', () => {
+    const usage = buildGithubUsage(
+      'octo',
+      [
+        {
+          account: { login: 'octo', kind: 'user', plan: 'pro' },
+          items: [{ product: 'Actions', sku: 'actions_linux', grossQuantity: 2900, netAmount: 0 }],
+          budgets: [],
+        },
+        { account: org, items: parseBillingItems(summary), budgets: [] },
+      ],
+      NOW,
+    );
+    assert.deepEqual(
+      usage.accounts.map((account) => account.login),
+      ['acme', 'octo'],
+    );
+    assert.equal(usage.windows[1].limit.percentage, 97);
+    assert.equal(usage.status, 'critical');
+  });
+});
+
+describe('AI credits budget', () => {
+  it('counts AI-credit SKUs, not Copilot seat licences', () => {
+    const [aiCredits] = buildAccountRows(
+      {
+        account: { login: 'acme', kind: 'organization', plan: 'enterprise' },
+        items: [
+          { product: 'Copilot', sku: 'copilot_ai_credit', grossQuantity: 1, netAmount: 4 },
+          { product: 'Copilot', sku: 'coding_agent_ai_credit', grossQuantity: 1, netAmount: 1 },
+          { product: 'Copilot', sku: 'copilot_for_business', grossQuantity: 1, netAmount: 19 },
+          { product: 'Copilot', sku: 'copilot_enterprise', grossQuantity: 1, netAmount: 39 },
+        ],
+        budgets: [{ sku: 'ai_credits', amount: 50 }],
+      },
+      NOW,
+    ).filter((row) => row.id === 'acme:budget:ai_credits');
+    assert.equal(aiCredits.limit.used, 5);
+  });
+});
+
+describe('Org carry-over', () => {
+  it('keeps orgs an incomplete membership list missed', () => {
+    const limit = { percentage: 10, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = buildGithubUsage('octo', [], NOW);
+    previous.accounts = [
+      { login: 'acme', kind: 'organization', plan: 'enterprise' },
+      { login: 'octo', kind: 'user', plan: 'pro' },
+    ];
+    previous.windows = [
+      { id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit },
+      { id: 'octo:actions-minutes', label: 'Actions minutes', group: 'octo', limit },
+    ];
+    const next = {
+      ...previous,
+      accounts: [previous.accounts[1]],
+      windows: [previous.windows[1]],
+      orgsIncomplete: true,
+    };
+    const carried = carryBudgets(next, previous);
+    assert.deepEqual(
+      carried.accounts.map((account) => account.login),
+      ['acme', 'octo'],
+    );
+    assert.deepEqual(
+      carried.windows.map((row) => row.id),
+      ['acme:actions-minutes', 'octo:actions-minutes'],
+    );
+
+    // Not into a new month: last month's rows are not current.
+    const nextMonth = { ...next, lastUpdated: Date.UTC(2026, 10, 1, 1) };
+    assert.deepEqual(
+      carryBudgets(nextMonth, previous).accounts.map((account) => account.login),
+      ['octo'],
+    );
+  });
+});
+
+describe('Budget carry-over', () => {
+  it('keeps the last budget rows when the budget listing fails', () => {
+    const limit = { percentage: 0, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = buildGithubUsage('octo', [], NOW);
+    previous.windows = [
+      { id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit },
+      { id: 'acme:budget:actions', label: 'Actions budget', group: 'acme', limit },
+      { id: 'octo:actions-minutes', label: 'Actions minutes', group: 'octo', limit },
+    ];
+    const next = {
+      ...previous,
+      windows: [previous.windows[0], previous.windows[2]],
+      budgetsMissing: ['acme'],
+    };
+    assert.deepEqual(
+      carryBudgets(next, previous).windows.map((row) => row.id),
+      ['acme:actions-minutes', 'acme:budget:actions', 'octo:actions-minutes'],
+    );
+    // Nothing to carry when the listing succeeded.
+    const { budgetsMissing: _, ...fresh } = next;
+    assert.equal(carryBudgets(fresh, previous), fresh);
+    // Nor into a new billing month: last month's spend is not current.
+    const nextMonth = { ...next, lastUpdated: Date.UTC(2026, 10, 1, 1) };
+    assert.deepEqual(
+      carryBudgets(nextMonth, previous).windows.map((row) => row.id),
+      ['acme:actions-minutes', 'octo:actions-minutes'],
+    );
+  });
+});
+
+describe('Actions minutes', () => {
+  it('counts slim and Arm standard runners and leaves larger runners out', () => {
+    const items = [
+      { sku: 'actions_linux_slim', grossQuantity: 10 },
+      { sku: 'actions_linux_arm', grossQuantity: 20 },
+      { sku: 'actions_windows_arm', grossQuantity: 5 },
+      { sku: 'actions_linux_4_core', grossQuantity: 100 },
+    ].map((item) => ({ product: 'actions', netAmount: 0, ...item }));
+    assert.equal(actionsMinutes(items as Parameters<typeof actionsMinutes>[0]), 40);
+  });
+});
+
+describe('Bounded requests', () => {
+  it('runs at most the limit at once and keeps results in order', async () => {
+    let running = 0;
+    let peak = 0;
+    const results = await mapLimited(
+      Array.from({ length: 10 }, (_, index) => index),
+      async (index) => {
+        running += 1;
+        peak = Math.max(peak, running);
+        await new Promise((resolve) => setTimeout(resolve, (10 - index) % 3));
+        running -= 1;
+        return index * 2;
+      },
+      3,
+    );
+    assert.equal(peak, 3);
+    assert.deepEqual(results, [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
+  });
+});
+
+describe('GitHub usage request', () => {
+  let store: Record<string, unknown>;
+
+  beforeEach(() => {
+    store = { github_token: 'test-token' };
+    (globalThis as { chrome?: unknown }).chrome = {
+      storage: {
+        local: {
+          get: async (keys: string | string[]) =>
+            Object.fromEntries(
+              [keys]
+                .flat()
+                .filter((key) => key in store)
+                .map((key) => [key, store[key]]),
+            ),
+          set: async (items: Record<string, unknown>) => void Object.assign(store, items),
+          remove: async (keys: string | string[]) => {
+            for (const key of [keys].flat()) delete store[key];
+          },
+        },
+      },
+    };
+  });
+
+  afterEach(() => {
+    mock.restoreAll();
+    mock.timers.reset();
+    delete (globalThis as { chrome?: unknown }).chrome;
+  });
+
+  it('reads the hourly API allowance from the free rate-limit endpoint', async () => {
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      assert.equal(url, 'https://api.github.com/rate_limit');
+      return Response.json({ resources: { core: { limit: 5000, used: 539, reset: 1792353160 } } });
+    });
+    assert.deepEqual(await GithubService.fetchRateLimit('test-token'), {
+      percentage: 11,
+      resetsAt: new Date(1792353160 * 1000).toISOString(),
+      windowMs: 3_600_000,
+      used: 539,
+      limit: 5000,
+    });
+    mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 500 }));
+    assert.equal(await GithubService.fetchRateLimit('test-token'), null);
+  });
+
+  it('reads the user and every org it can bill, skipping orgs it cannot', async () => {
+    const requests: string[] = [];
+    mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+      requests.push(url);
+      assert.equal(new Headers(init.headers).get('Authorization'), 'Bearer test-token');
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') {
+        return Response.json(
+          { login: 'octo', plan: { name: 'pro' } },
+          { headers: { 'X-OAuth-Scopes': 'read:org, user' } },
+        );
+      }
+      if (path.startsWith('/user/orgs'))
+        return Response.json([{ login: 'acme' }, { login: 'other' }]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path === '/orgs/other') return Response.json({});
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        assert.match(path, /year=2026&month=10$/);
+        return Response.json(summary);
+      }
+      if (path.startsWith('/organizations/acme/settings/billing/budgets'))
+        return Response.json(budgets);
+      if (path.startsWith('/users/octo/settings/billing/usage/summary')) {
+        return Response.json({ usageItems: [] });
+      }
+      return new Response('{}', { status: 403 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.ok(usage);
+    assert.equal(usage.viewer, 'octo');
+    assert.deepEqual(
+      usage.accounts.map((account) => account.login),
+      ['acme', 'octo'],
+    );
+    assert.deepEqual(
+      usage.windows.map((row) => row.id),
+      [
+        'acme:actions-minutes',
+        'acme:budget:actions',
+        'acme:budget:ai_credits',
+        'octo:actions-minutes',
+      ],
+    );
+    assert.ok(!requests.some((url) => url.includes('/users/octo/settings/billing/budgets')));
+    assert.deepEqual(usage.unreadable, [{ login: 'other', status: 403 }]);
+  });
+
+  it('reads orgs saved with a fine-grained token, which cannot list them', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      // Fine-grained tokens always get an empty org list.
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path.startsWith('/organizations/acme/settings/billing/budgets'))
+        return Response.json(budgets);
+      // An org-owned token cannot read the personal report.
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.ok(usage);
+    assert.deepEqual(
+      usage.accounts.map((account) => account.login),
+      ['acme'],
+    );
+    assert.equal(usage.windows[0].limit.used, 18483);
+    // The personal account failing is expected with an org token, so it is not reported.
+    assert.deepEqual(usage.unreadable, []);
+  });
+
+  it('follows every page of organization memberships', async () => {
+    const orgPages: string[] = [];
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) {
+        orgPages.push(path);
+        if (path.endsWith('&page=1')) {
+          return Response.json(Array.from({ length: 100 }, (_, i) => ({ login: `org-${i}` })));
+        }
+        return Response.json([{ login: 'last-org' }]);
+      }
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(orgPages, [
+      '/user/orgs?per_page=100&page=1',
+      '/user/orgs?per_page=100&page=2',
+    ]);
+    assert.ok(usage?.unreadable.some((entry) => entry.login === 'last-org'));
+  });
+
+  it('marks an org listing still full at the page cap as incomplete', async () => {
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) {
+        const page = path.split('page=').pop();
+        return Response.json(
+          Array.from({ length: 100 }, (_, i) => ({ login: `org-${page}-${i}` })),
+        );
+      }
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.equal(usage?.orgsIncomplete, true);
+  });
+
+  it('keeps a newer token when an older one is rejected mid-refresh', async () => {
+    mock.method(globalThis, 'fetch', async () => {
+      store.github_token = 'newer-token';
+      return new Response('{}', { status: 401 });
+    });
+    assert.equal(await GithubService.fetchUsage(NOW, 'test-token'), null);
+    assert.equal(store.github_token, 'newer-token');
+  });
+
+  it('saves a pasted token only after GitHub accepts it', async () => {
+    store = {};
+    mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) =>
+      new Headers(init.headers).get('Authorization') === 'Bearer good-token'
+        ? Response.json({ login: 'octo' })
+        : new Response('{}', { status: 401 }),
+    );
+
+    await assert.rejects(GithubService.saveToken('bad-token', ['acme']), /token_rejected/);
+    assert.equal(store.github_token, undefined);
+
+    await GithubService.saveToken('  good-token ', [' acme ', '']);
+    assert.equal(store.github_token, 'good-token');
+    assert.deepEqual(store.github_orgs, ['acme']);
+
+    await GithubService.signOut();
+    assert.equal(store.github_token, undefined);
+    assert.equal(store.github_orgs, undefined);
+  });
+
+  it('subtracts minutes run in public repositories', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    const requests: string[] = [];
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      requests.push(path);
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage?')) {
+        return Response.json({
+          usageItems: [
+            { repositoryName: 'private-app', unitType: 'Minutes', quantity: 18000 },
+            // GitHub's documented example names repositories `owner/name`.
+            { repositoryName: 'acme/open-lib', unitType: 'Minutes', quantity: 223 },
+            { repositoryName: 'open-docs', unitType: 'GigabyteHours', quantity: 1 },
+          ],
+        });
+      }
+      if (path === '/orgs/acme/repos?type=public&per_page=100&page=1') {
+        // A full first page sends the listing on to page 2.
+        return Response.json([
+          ...Array.from({ length: 99 }, (_, i) => ({ name: `filler-${i}` })),
+          { name: 'open-docs' },
+        ]);
+      }
+      if (path === '/orgs/acme/repos?type=public&per_page=100&page=2') {
+        return Response.json([{ name: 'open-lib' }]);
+      }
+      if (path.endsWith('&repository=acme/open-lib')) {
+        return Response.json({
+          usageItems: [{ product: 'Actions', sku: 'actions_linux', grossQuantity: 223 }],
+        });
+      }
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    // 18,483 weighted minutes in total, 223 of them free in open-lib.
+    assert.equal(usage?.windows[0].limit.used, 18260);
+    // open-docs only stored artifacts, so it is never summarised.
+    assert.ok(!requests.some((path) => path.endsWith('repository=acme/open-docs')));
+  });
+
+  it('treats a public-repository list cut off at the page cap as unknown', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage?')) {
+        return Response.json({
+          usageItems: [{ repositoryName: 'open-lib', unitType: 'Minutes', quantity: 223 }],
+        });
+      }
+      // Every page is full, so the cap is reached with more still to come.
+      if (path.startsWith('/orgs/acme/repos?')) {
+        return Response.json(Array.from({ length: 100 }, (_, i) => ({ name: `filler-${i}` })));
+      }
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.minutesMissing, ['acme']);
+  });
+
+  it('reads every page of the budget listing', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path === '/organizations/acme/settings/billing/budgets?per_page=100&page=1') {
+        return Response.json({
+          budgets: [{ budget_product_sku: 'actions', budget_amount: 50 }],
+          has_next_page: true,
+        });
+      }
+      if (path === '/organizations/acme/settings/billing/budgets?per_page=100&page=2') {
+        return Response.json({
+          budgets: [{ budget_product_sku: 'ai_credits', budget_amount: 50 }],
+          has_next_page: false,
+        });
+      }
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(
+      usage?.windows.map((row) => row.id),
+      ['acme:actions-minutes', 'acme:budget:actions', 'acme:budget:ai_credits'],
+    );
+  });
+
+  it('treats a failed later budget page as a failed listing', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.endsWith('/budgets?per_page=100&page=1')) {
+        return Response.json({ budgets: budgets.budgets, has_next_page: true });
+      }
+      return new Response('{}', { status: 403 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(
+      usage?.windows.map((row) => row.id),
+      ['acme:actions-minutes'],
+    );
+    assert.deepEqual(usage?.budgetsMissing, ['acme']);
+  });
+
+  it('meters a budget by GitHub’s own consumed amount, which starts at its creation', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    let detail: Response = Response.json({ id: 'b1', consumed_amount: 1.5 });
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path.startsWith('/organizations/acme/settings/billing/budgets?')) {
+        return Response.json({
+          budgets: [{ id: 'b1', budget_product_sku: 'ai_credits', budget_amount: 50 }],
+        });
+      }
+      if (path === '/organizations/acme/settings/billing/budgets/b1') return detail;
+      if (path.includes('/settings/billing/usage?')) return Response.json({ usageItems: [] });
+      return new Response('{}', { status: 404 });
+    });
+
+    // The month's summary has $4.26 of AI credits; the budget only counts $1.50.
+    const usage = await GithubService.fetchUsage(NOW);
+    const row = usage?.windows.find((window) => window.id === 'acme:budget:ai_credits');
+    assert.equal(row?.limit.used, 1.5);
+
+    // Without the budget's own figure, its last row is kept instead.
+    detail = new Response('{}', { status: 502 });
+    const failed = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(failed?.budgetsMissing, ['acme']);
+    assert.ok(!failed?.windows.some((window) => window.id.startsWith('acme:budget:')));
+  });
+
+  it('treats a budget listing still paging at the cap as a failed listing', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path.includes('/budgets')) return Response.json({ budgets: [], has_next_page: true });
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.budgetsMissing, ['acme']);
+  });
+
+  it('treats a budget page without a budgets array as a failed listing', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path.includes('/budgets')) return Response.json({ has_next_page: false });
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.budgetsMissing, ['acme']);
+  });
+
+  it('flags the minutes as unknown when the public-repository lookup fails', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path.includes('/budgets')) return Response.json(budgets);
+      // The detailed report is down.
+      return new Response('{}', { status: 503 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.minutesMissing, ['acme']);
+
+    // The last accurate minutes row of the same month stands in.
+    const previous = {
+      ...usage!,
+      windows: usage!.windows.map((row) =>
+        row.id === 'acme:actions-minutes' ? { ...row, limit: { ...row.limit, used: 12345 } } : row,
+      ),
+    };
+    // With no row of this month to fall back on, the inflated row is left out.
+    assert.equal(
+      carryBudgets(usage!).windows.some((row) => row.id === 'acme:actions-minutes'),
+      false,
+    );
+    const carried = carryBudgets(usage!, previous);
+    assert.equal(
+      carried.windows.find((row) => row.id === 'acme:actions-minutes')?.limit.used,
+      12345,
+    );
+  });
+
+  it('does not bring back a listed org whose billing is now refused', () => {
+    const limit = { percentage: 10, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = buildGithubUsage('octo', [], NOW);
+    previous.accounts = [{ login: 'acme', kind: 'organization', plan: 'enterprise' }];
+    previous.windows = [
+      { id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit },
+    ];
+    // The listing failed on a later page, but acme was on page 1 and now answers 404.
+    const next = {
+      ...buildGithubUsage('octo', [], NOW, [{ login: 'acme', status: 404 }]),
+      orgsIncomplete: true,
+      orgsChecked: ['acme'],
+    };
+    assert.deepEqual(carryBudgets(next, previous).windows, []);
+  });
+
+  it('keeps an account whose summary failed with a server error', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/')) return new Response('{}', { status: 503 });
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.accountsMissing, ['acme']);
+
+    const limit = { percentage: 10, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = {
+      ...usage!,
+      accounts: [{ login: 'acme', kind: 'organization' as const, plan: 'enterprise' }],
+      windows: [{ id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit }],
+    };
+    assert.deepEqual(
+      carryBudgets(usage!, previous).windows.map((row) => row.id),
+      ['acme:actions-minutes'],
+    );
+  });
+
+  it('treats a rate-limited 403 as passing and keeps the org', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/')) {
+        return Response.json(
+          { message: 'API rate limit exceeded for user ID 1.' },
+          { status: 403, headers: { 'X-RateLimit-Remaining': '0' } },
+        );
+      }
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.accountsMissing, ['acme']);
+    assert.deepEqual(usage?.unreadable, [{ login: 'acme', status: 429 }]);
+  });
+
+  it('puts the last minutes row back when an org’s plan lookup fails', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return new Response('{}', { status: 502 });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path.includes('/budgets')) return Response.json(budgets);
+      if (path.includes('/settings/billing/usage?')) return Response.json({ usageItems: [] });
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.minutesMissing, ['acme']);
+    assert.ok(!usage?.windows.some((row) => row.id === 'acme:actions-minutes'));
+
+    const limit = { percentage: 37, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = {
+      ...usage!,
+      windows: [{ id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit }],
+    };
+    assert.equal(carryBudgets(usage!, previous).windows[0].id, 'acme:actions-minutes');
+  });
+
+  it('keeps no minutes row for an org whose plan and billing are both denied', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return new Response('{}', { status: 404 });
+      if (path.startsWith('/organizations/acme/')) return new Response('{}', { status: 403 });
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.equal(usage?.minutesMissing, undefined);
+
+    const limit = { percentage: 37, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = {
+      ...usage!,
+      windows: [{ id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit }],
+    };
+    assert.deepEqual(carryBudgets(usage!, previous).windows, []);
+  });
+
+  it('treats a summary without usageItems as unreadable, not as zero usage', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json({ timePeriod: { year: 2026 } });
+      }
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.accountsMissing, ['acme']);
+    assert.ok(!usage?.windows.some((row) => row.group === 'acme'));
+  });
+
+  it('signs out when GitHub rejects the stored token', async () => {
+    mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 401 }));
+    assert.equal(await GithubService.fetchUsage(NOW), null);
+    assert.equal(store.github_token, undefined);
+  });
+
+  it('returns nothing without a token', async () => {
+    delete store.github_token;
+    const fetchMock = mock.method(globalThis, 'fetch', async () => Response.json({}));
+    assert.equal(await GithubService.fetchUsage(NOW), null);
+    assert.equal(fetchMock.mock.callCount(), 0);
+  });
+
+  it('stores the device code, then the token once GitHub approves it', async () => {
+    delete store.github_token;
+    mock.timers.enable({ apis: ['setTimeout'] });
+    const tokenResponses = [
+      { error: 'authorization_pending' },
+      { access_token: 'granted-token', token_type: 'bearer' },
+    ];
+    mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+      const body = new URLSearchParams(String(init.body));
+      if (url === 'https://github.com/login/device/code') {
+        assert.ok(body.get('client_id'));
+        assert.equal(body.get('scope'), 'read:org user');
+        return Response.json({
+          device_code: 'device-123',
+          user_code: 'ABCD-1234',
+          verification_uri: 'https://github.com/login/device',
+          expires_in: 900,
+          interval: 5,
+        });
+      }
+      assert.equal(url, 'https://github.com/login/oauth/access_token');
+      assert.equal(body.get('device_code'), 'device-123');
+      return Response.json(tokenResponses.shift());
+    });
+
+    let signedIn = false;
+    const flow = await GithubService.startSignIn(() => {
+      signedIn = true;
+    });
+    assert.equal(flow.userCode, 'ABCD-1234');
+    assert.deepEqual((store.github_device_flow as { userCode: string }).userCode, 'ABCD-1234');
+
+    for (let round = 0; round < 2 && !signedIn; round += 1) {
+      mock.timers.tick(5000);
+      for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
+    }
+
+    assert.equal(signedIn, true);
+    assert.equal(store.github_token, 'granted-token');
+    assert.equal(store.github_device_flow, undefined);
+  });
+
+  it('discards a token that arrives after the sign-in was cancelled', async () => {
+    delete store.github_token;
+    mock.timers.enable({ apis: ['setTimeout'] });
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      if (url.endsWith('/device/code')) {
+        return Response.json({
+          device_code: 'd',
+          user_code: 'LATE-0000',
+          verification_uri: 'https://github.com/login/device',
+          expires_in: 900,
+          interval: 5,
+        });
+      }
+      // The user cancels while the token request is in flight.
+      await GithubService.signOut();
+      return Response.json({ access_token: 'late-token' });
+    });
+
+    await GithubService.startSignIn(() => assert.fail('should not sign in'));
+    mock.timers.tick(5000);
+    for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal(store.github_token, undefined);
+  });
+
+  it('records why a device sign-in ended without a token', async () => {
+    delete store.github_token;
+    mock.timers.enable({ apis: ['setTimeout'] });
+    mock.method(globalThis, 'fetch', async (url: string) =>
+      url.endsWith('/device/code')
+        ? Response.json({
+            device_code: 'd',
+            user_code: 'WXYZ-0000',
+            verification_uri: 'https://github.com/login/device',
+            expires_in: 900,
+            interval: 5,
+          })
+        : Response.json({ error: 'access_denied' }),
+    );
+
+    await GithubService.startSignIn(() => assert.fail('should not sign in'));
+    mock.timers.tick(5000);
+    for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal((store.github_device_flow as { error?: string }).error, 'access_denied');
+    assert.equal(store.github_token, undefined);
+  });
+});

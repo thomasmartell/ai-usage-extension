@@ -1,8 +1,15 @@
 import { WINDOW_MS } from './constants';
 import { msg } from './i18n';
-import type { ClaudeUsage, CodexUsage, ModelUsage, UsageLimit } from './types';
+import type {
+  ClaudeUsage,
+  CodexUsage,
+  GithubUsage,
+  ModelUsage,
+  NetlifyUsage,
+  UsageLimit,
+} from './types';
 
-export type ProviderUsage = ClaudeUsage | CodexUsage;
+export type ProviderUsage = ClaudeUsage | CodexUsage | GithubUsage | NetlifyUsage;
 
 /**
  * Claude's two provider windows are fixed at 5h and 7d, so snapshots written
@@ -40,7 +47,7 @@ export const withInferredWindow = (model: ModelUsage): ModelUsage => {
 };
 
 /**
- * Return the provider-level limits shown in the popup, overlay, and badge.
+ * Return the provider-level limits shown in the popup and badge.
  *
  * Codex windows are dynamic because the backend can return one or more periods
  * in either the primary or secondary slot. The legacy fallback keeps snapshots
@@ -60,6 +67,10 @@ export const getUsageWindows = (usage: ProviderUsage): ModelUsage[] => {
         limit: withWindow(usage.weekly, WINDOW_MS.sevenDays),
       },
     ];
+  }
+
+  if ('accounts' in usage || 'teams' in usage) {
+    return usage.windows;
   }
 
   if (Array.isArray(usage.windows)) {
@@ -85,7 +96,7 @@ export const getUsageWindows = (usage: ProviderUsage): ModelUsage[] => {
 };
 
 /** Split "GPT 5.3 Codex Spark · 5h" into its base label and window tag. */
-const splitLabel = (label: string): { base: string; tag: string | null } => {
+export const splitLabel = (label: string): { base: string; tag: string | null } => {
   const at = label.lastIndexOf(' · ');
   if (at === -1) return { base: label, tag: null };
   return { base: label.slice(0, at), tag: label.slice(at + 3) };
@@ -147,4 +158,34 @@ export const highestUsageWindow = (usage: ProviderUsage): ModelUsage | null => {
   return windows.reduce((highest, current) =>
     current.limit.percentage > highest.limit.percentage ? current : highest,
   );
+};
+
+/**
+ * The fullest limit a provider reports, model rows included (a model can
+ * run hotter than the provider's own windows).
+ */
+export const peakUsage = (usage: ProviderUsage): ModelUsage | null => {
+  const rows = [...getUsageWindows(usage), ...usage.models];
+  if (rows.length === 0) return null;
+
+  return rows.reduce((peak, row) => (row.limit.percentage > peak.limit.percentage ? row : peak));
+};
+
+/**
+ * The row a provider leads with, on its card and in the toolbar icon: its
+ * weekly limit when it has one, otherwise its fullest row that resets
+ * (GitHub's are monthly; Netlify's add-on credits never reset, so the
+ * cycle's plan credits lead instead), otherwise its fullest row.
+ */
+export const leadUsage = (usage: ProviderUsage): { row: ModelUsage; weekly: boolean } | null => {
+  const windows = getUsageWindows(usage);
+  const weekly = windows.find((window) => window.limit.windowMs === WINDOW_MS.sevenDays);
+  if (weekly) return { row: weekly, weekly: true };
+
+  const resetting = windows.filter((row) => row.limit.resetsAt);
+  const row =
+    resetting.length > 0
+      ? resetting.reduce((a, b) => (b.limit.percentage > a.limit.percentage ? b : a))
+      : peakUsage(usage);
+  return row ? { row, weekly: false } : null;
 };

@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, WINDOW_MS } from '../../shared/constants';
+import { SLOW_REFRESH_MINUTES, STORAGE_KEYS, WINDOW_MS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
 import { accountFingerprint } from '../../shared/diagnostics';
 import {
@@ -10,6 +10,8 @@ import {
   UsageState,
 } from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
+import { carryBudgets, GithubService } from './GithubService';
+import { carryCredits, NetlifyService } from './NetlifyService';
 
 const ENDPOINTS = {
   claudeOrgs: 'https://claude.ai/api/organizations',
@@ -467,10 +469,18 @@ const historySamples = (state: UsageState): Array<[string, number]> => {
       samples.push([`codex:${model.id}`, model.limit.percentage]);
     }
   }
+  for (const window of state.github?.windows ?? []) {
+    samples.push([`github:${window.id}`, window.limit.percentage]);
+  }
+  for (const window of state.netlify?.windows ?? []) {
+    samples.push([`netlify:${window.id}`, window.limit.percentage]);
+  }
   return samples;
 };
 
 /* -------------------- Service -------------------- */
+
+let stateQueue: Promise<unknown> = Promise.resolve();
 
 export class UsageService {
   static async getUsageState(): Promise<UsageState> {
@@ -482,23 +492,85 @@ export class UsageService {
     await chrome.storage.local.set({ [STORAGE_KEYS.usageState]: state });
   }
 
-  static async refreshAllUsage(): Promise<UsageState> {
-    const [claude, codex] = await Promise.all([
+  /**
+   * Fetch every provider and store the result. Unless `force` is set (a
+   * refresh the user asked for, or a new token), GitHub and Netlify are only
+   * fetched once their snapshot is `SLOW_REFRESH_MINUTES` old.
+   */
+  static async refreshAllUsage({ force = false } = {}): Promise<UsageState> {
+    const [githubToken, netlifyToken, stored] = await Promise.all([
+      GithubService.currentToken(),
+      NetlifyService.currentToken(),
+      this.getUsageState(),
+    ]);
+    // Half a minute of slack, so a 30-minute cadence is not pushed to 35 by
+    // the 5-minute alarm firing a moment early.
+    const due = (snapshot: { lastUpdated: number } | undefined, minutes: number) =>
+      force || !snapshot || Date.now() - snapshot.lastUpdated >= minutes * 60_000 - 30_000;
+    const [claude, codex, [github, apiLimit], netlify] = await Promise.all([
       this.fetchClaudeUsage().catch(() => null),
       this.fetchCodexUsage().catch(() => null),
+      // The hourly API allowance is read every time (that read is free), and
+      // after the billing calls so it counts them.
+      (due(stored.github, SLOW_REFRESH_MINUTES.github)
+        ? GithubService.fetchUsage(Date.now(), githubToken).catch(() => null)
+        : Promise.resolve(null)
+      ).then(
+        async (usage) =>
+          [usage, githubToken ? await GithubService.fetchRateLimit(githubToken) : null] as const,
+      ),
+      due(stored.netlify, SLOW_REFRESH_MINUTES.netlify)
+        ? NetlifyService.fetchUsage(Date.now(), netlifyToken).catch(() => null)
+        : null,
     ]);
 
-    const next = await this.getUsageState();
-    if (claude) next.claude = claude;
-    if (codex) next.codex = codex;
+    return this.updateUsageState(async (next) => {
+      const previousGithub = next.github;
+      const previousNetlify = next.netlify;
+      if (claude) next.claude = claude;
+      if (codex) next.codex = codex;
+      // Read the tokens again rather than trusting the fetch: a sign-out, or a
+      // different token saved, while this refresh was in flight must not have
+      // the old token's snapshot stored.
+      const [githubNow, netlifyNow] = await Promise.all([
+        GithubService.currentToken(),
+        NetlifyService.currentToken(),
+      ]);
+      if (!githubNow) delete next.github;
+      else if (githubNow === githubToken) {
+        if (github) next.github = carryBudgets(github, previousGithub);
+        if (next.github && apiLimit) next.github.apiLimit = apiLimit;
+      }
+      if (!netlifyNow) delete next.netlify;
+      else if (netlify && netlifyNow === netlifyToken)
+        next.netlify = carryCredits(netlify, previousNetlify);
 
-    await this.saveUsageState(next);
-    try {
-      await this.recordHistory(next);
-    } catch (error) {
-      console.debug('Failed to record usage history', error);
-    }
-    return next;
+      try {
+        await this.recordHistory(next);
+      } catch (error) {
+        console.debug('Failed to record usage history', error);
+      }
+    });
+  }
+
+  /**
+   * Read, change and save the stored snapshot as one step. Refreshes and
+   * sign-outs both rewrite it; queued here, neither can save over the other
+   * with a copy read before the other's write.
+   */
+  static updateUsageState(
+    change: (state: UsageState) => Promise<void> | void,
+  ): Promise<UsageState> {
+    const run = stateQueue
+      .catch(() => undefined)
+      .then(async () => {
+        const state = await this.getUsageState();
+        await change(state);
+        await this.saveUsageState(state);
+        return state;
+      });
+    stateQueue = run;
+    return run;
   }
 
   /** Append the snapshot to the rolling history and prune anything stale. */

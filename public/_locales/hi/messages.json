@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Claude और ChatGPT (Codex) की सत्र और साप्ताहिक सीमाएं पॉपअप, बैज और पेज ओवरले में देखें। निजी, बिना सेटअप।"
+    "message": "Claude और ChatGPT (Codex) की सत्र और साप्ताहिक सीमाएं पॉपअप और बैज में देखें। निजी, बिना सेटअप।"
   },
   "popupEyebrow": {
     "message": "AI क्षमता"
@@ -25,9 +25,6 @@
   },
   "refreshFailed": {
     "message": "अपडेट विफल रहा"
-  },
-  "overlayToggleLabel": {
-    "message": "पेज ओवरले"
   },
   "availableResetsLabel": {
     "message": "उपलब्ध रीसेट · $1"
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "इस दर पर: रीसेट से ~$1 पहले सीमा"
   },
-  "settingsLabel": {
-    "message": "सेटिंग्स"
-  },
   "nextResetLabel": {
     "message": "$1 में रीसेट"
   },
@@ -112,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "अभी कोई डेटा नहीं है। साइन इन करके chatgpt.com खोलें, फिर अपडेट करें।"
-  },
-  "emptyOverlay": {
-    "message": "अभी कोई डेटा नहीं है। पॉपअप खोलें और अपडेट करें।"
   },
   "sourceCode": {
     "message": "स्रोत कोड"
@@ -142,5 +133,131 @@
   },
   "timeMinuteShort": {
     "message": "मि."
+  },
+  "emptyGithub": {
+    "message": "अपने खाते और संगठनों के Actions मिनट और बजट खर्च देखने के लिए साइन इन करें।"
+  },
+  "githubActionsMinutes": {
+    "message": "Actions मिनट"
+  },
+  "githubApiCalls": {
+    "message": "इस घंटे के API कॉल"
+  },
+  "githubBudget": {
+    "message": "$1 बजट"
+  },
+  "githubSignIn": {
+    "message": "GitHub से साइन इन करें"
+  },
+  "githubSignOut": {
+    "message": "साइन आउट"
+  },
+  "githubCancel": {
+    "message": "रद्द करें"
+  },
+  "githubEnterCode": {
+    "message": "GitHub पर यह कोड दर्ज करें:"
+  },
+  "githubOpenAndCopy": {
+    "message": "कोड कॉपी करें और GitHub खोलें"
+  },
+  "githubWaiting": {
+    "message": "स्वीकृति की प्रतीक्षा…"
+  },
+  "githubSignInFailed": {
+    "message": "साइन इन पूरा नहीं हुआ ($1)। फिर से कोशिश करें।"
+  },
+  "githubSignedInAs": {
+    "message": "$1 के रूप में साइन इन"
+  },
+  "githubNoBilling": {
+    "message": "यह खाता कोई बिलिंग डेटा नहीं पढ़ सकता।"
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 मिनट"
+  },
+  "githubUnreadable": {
+    "message": "$1 का बिलिंग डेटा नहीं पढ़ा जा सका (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "इसके बजाय टोकन उपयोग करें"
+  },
+  "githubTokenHint": {
+    "message": "संगठन का फ़ाइन-ग्रेन्ड टोकन, Administration और Plan के लिए केवल-पढ़ने की पहुँच के साथ।"
+  },
+  "githubTokenLabel": {
+    "message": "टोकन"
+  },
+  "githubOrgLabel": {
+    "message": "संगठन"
+  },
+  "githubSaveToken": {
+    "message": "टोकन सहेजें"
+  },
+  "githubCreateToken": {
+    "message": "GitHub पर बनाएँ"
+  },
+  "headlineWatch": {
+    "message": "$1 $2% पर है"
+  },
+  "headlineClear": {
+    "message": "सभी सीमाएँ आराम से हैं"
+  },
+  "headlineHighest": {
+    "message": "सबसे ऊँचा $1, $2% पर"
+  },
+  "headlineHit": {
+    "message": "$1 की सीमा पूरी हुई"
+  },
+  "weeklyShort": {
+    "message": "साप्ताहिक"
+  },
+  "monthShort": {
+    "message": "इस महीने"
+  },
+  "resetsHeading": {
+    "message": "उपलब्ध रीसेट · $1"
+  },
+  "expiresLabel": {
+    "message": "$1 को समाप्त"
+  },
+  "netlifyBuildMinutes": {
+    "message": "बिल्ड मिनट"
+  },
+  "netlifyBandwidth": {
+    "message": "बैंडविड्थ"
+  },
+  "netlifyPlanCredits": {
+    "message": "प्लान क्रेडिट"
+  },
+  "netlifyAddonCredits": {
+    "message": "अतिरिक्त क्रेडिट"
+  },
+  "emptyNetlify": {
+    "message": "क्रेडिट, बिल्ड मिनट और बैंडविड्थ देखने के लिए Netlify पर्सनल एक्सेस टोकन पेस्ट करें।"
+  },
+  "netlifyCreateToken": {
+    "message": "Netlify पर बनाएँ"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 GB"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 क्रेडिट"
+  },
+  "cycleShort": {
+    "message": "इस चक्र"
+  },
+  "openUsagePage": {
+    "message": "$1 उपयोग पेज खोलें"
+  },
+  "openFullView": {
+    "message": "पूरा दृश्य खोलें"
+  },
+  "sectionAssistants": {
+    "message": "AI सहायक"
+  },
+  "sectionServices": {
+    "message": "डेवलपर सेवाएँ"
   }
 }
