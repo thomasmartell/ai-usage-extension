@@ -2,6 +2,7 @@ import { STORAGE_KEYS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
 import type { ModelUsage, NetlifyUsage } from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
+import { mapLimited } from '../mapLimited';
 
 const API = 'https://api.netlify.com/api/v1';
 const BYTES_PER_GB = 1_000_000_000;
@@ -307,13 +308,12 @@ export class NetlifyService {
     }
 
     const accounts = parseAccounts(listing.data);
-    const details = await Promise.all(
-      accounts.map((account) =>
-        Promise.all([
-          ignoreFailure(netlifyGet(`/${account.slug}/builds/status`, token)),
-          ignoreFailure(netlifyGet(`/${account.slug}/billing/credits`, token)),
-        ]),
-      ),
+    // A few teams at a time, not every team's two lookups at once.
+    const details = await mapLimited(accounts, (account) =>
+      Promise.all([
+        ignoreFailure(netlifyGet(`/${account.slug}/builds/status`, token)),
+        ignoreFailure(netlifyGet(`/${account.slug}/billing/credits`, token)),
+      ]),
     );
 
     const unreadable: NonNullable<NetlifyUsage['unreadable']> = [];

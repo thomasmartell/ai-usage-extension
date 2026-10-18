@@ -8,6 +8,7 @@ import type {
   UsageLimit,
 } from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
+import { mapLimited } from '../mapLimited';
 
 const API = 'https://api.github.com';
 const DEVICE_CODE_URL = 'https://github.com/login/device/code';
@@ -437,31 +438,6 @@ const fetchBudgets = async (base: string, token: string): Promise<Json | null> =
 };
 
 const REPO_PAGE_LIMIT = 10;
-
-/**
- * Requests in flight at once for per-org and per-repo lookups. GitHub asks
- * integrators not to fire requests concurrently, and a burst across many
- * orgs trips its secondary rate limit.
- */
-const MAX_CONCURRENT = 4;
-
-/** `items.map(work)`, with at most `MAX_CONCURRENT` running at a time, in order. */
-export const mapLimited = async <T, R>(
-  items: T[],
-  work: (item: T) => Promise<R>,
-  limit = MAX_CONCURRENT,
-): Promise<R[]> => {
-  const results: R[] = new Array(items.length);
-  let next = 0;
-  const worker = async () => {
-    while (next < items.length) {
-      const index = next++;
-      results[index] = await work(items[index]);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return results;
-};
 
 /** A failure worth riding out (network, rate limit, server error), not a lack of access. */
 const isTransient = (status: number): boolean => status === 0 || status === 429 || status >= 500;

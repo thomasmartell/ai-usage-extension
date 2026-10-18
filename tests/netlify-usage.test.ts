@@ -337,6 +337,24 @@ describe('Netlify usage request', () => {
     );
   });
 
+  it('looks up only a few teams at a time', async () => {
+    let running = 0;
+    let peak = 0;
+    const teams = Array.from({ length: 20 }, (_, index) => ({ ...account, slug: `t${index}` }));
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      if (url.includes('/accounts?')) return Response.json(teams);
+      running += 1;
+      peak = Math.max(peak, running);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      running -= 1;
+      return Response.json(creditStatus);
+    });
+    const usage = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18));
+    assert.equal(usage?.teams.length, 20);
+    // Four teams, two lookups each.
+    assert.ok(peak <= 8, `peak ${peak}`);
+  });
+
   it('follows every page of the team listing', async () => {
     const pages: string[] = [];
     mock.method(globalThis, 'fetch', async (url: string) => {

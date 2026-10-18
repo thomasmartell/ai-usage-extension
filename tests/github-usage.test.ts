@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
+import { mapLimited } from '../src/background/mapLimited';
 import {
   actionsMinutes,
   billingMonth,
@@ -7,7 +8,6 @@ import {
   buildGithubUsage,
   carryBudgets,
   GithubService,
-  mapLimited,
   parseBillingItems,
   parseBudgets,
 } from '../src/background/services/GithubService';
