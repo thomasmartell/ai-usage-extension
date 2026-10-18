@@ -86,6 +86,8 @@ export interface GithubUsage {
   budgetsMissing?: string[];
   /** The org membership list failed part-way, so some orgs may be missing. */
   orgsIncomplete?: boolean;
+  /** Accounts whose usage summary failed transiently, so their last rows are kept. */
+  accountsMissing?: string[];
   /** Accounts whose public-repository minutes could not be read this time. */
   minutesMissing?: string[];
   status: UsageStatus;

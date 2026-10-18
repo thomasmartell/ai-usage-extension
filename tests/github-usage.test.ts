@@ -229,6 +229,13 @@ describe('Org carry-over', () => {
       carried.windows.map((row) => row.id),
       ['acme:actions-minutes', 'octo:actions-minutes'],
     );
+
+    // Not into a new month: last month's rows are not current.
+    const nextMonth = { ...next, lastUpdated: Date.UTC(2026, 10, 1, 1) };
+    assert.deepEqual(
+      carryBudgets(nextMonth, previous).accounts.map((account) => account.login),
+      ['octo'],
+    );
   });
 });
 
@@ -585,6 +592,31 @@ describe('GitHub usage request', () => {
     assert.equal(
       carried.windows.find((row) => row.id === 'acme:actions-minutes')?.limit.used,
       12345,
+    );
+  });
+
+  it('keeps an account whose summary failed with a server error', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/')) return new Response('{}', { status: 503 });
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.accountsMissing, ['acme']);
+
+    const limit = { percentage: 10, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = {
+      ...usage!,
+      accounts: [{ login: 'acme', kind: 'organization' as const, plan: 'enterprise' }],
+      windows: [{ id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit }],
+    };
+    assert.deepEqual(
+      carryBudgets(usage!, previous).windows.map((row) => row.id),
+      ['acme:actions-minutes'],
     );
   });
 

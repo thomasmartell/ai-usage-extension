@@ -313,26 +313,39 @@ const fetchAccountBilling = async (
 };
 
 /**
- * When the org membership list came back incomplete, keep the organizations
- * it missed (and their rows) from the last snapshot instead of dropping them.
+ * Keep accounts this refresh could not read from the last snapshot: orgs an
+ * incomplete membership list missed, and accounts whose usage summary failed
+ * transiently (a rate limit or server error). Only rows of the current
+ * billing month are kept; last month's figures are not current.
  */
 const carryOrgs = (next: GithubUsage, previous?: GithubUsage): GithubUsage => {
-  if (!next.orgsIncomplete || !previous) return next;
+  if (!previous || (!next.orgsIncomplete && !next.accountsMissing?.length)) return next;
   const known = new Set(next.accounts.map((account) => account.login));
-  const missed = previous.accounts.filter(
-    (account) => account.kind === 'organization' && !known.has(account.login),
+  const missing = new Set(next.accountsMissing);
+  const current = (row: ModelUsage) =>
+    row.limit.resetsAt !== null && Date.parse(row.limit.resetsAt) > next.lastUpdated;
+
+  const carried = previous.accounts
+    .filter(
+      (account) =>
+        !known.has(account.login) &&
+        (missing.has(account.login) || (next.orgsIncomplete && account.kind === 'organization')),
+    )
+    .map((account) => ({
+      account,
+      rows: previous.windows.filter((row) => row.group === account.login && current(row)),
+    }))
+    .filter(({ rows }) => rows.length > 0);
+  if (carried.length === 0) return next;
+
+  // Organizations lead, as in `buildGithubUsage`; each account's rows stay together.
+  const accounts = [...next.accounts, ...carried.map(({ account }) => account)].sort(
+    (a, b) => Number(a.kind === 'user') - Number(b.kind === 'user'),
   );
-  if (missed.length === 0) return next;
-  const logins = new Set(missed.map((account) => account.login));
-  // Organizations lead, as in `buildGithubUsage`.
-  return {
-    ...next,
-    accounts: [...missed, ...next.accounts],
-    windows: [
-      ...previous.windows.filter((row) => row.group !== undefined && logins.has(row.group)),
-      ...next.windows,
-    ],
-  };
+  const rowsFor = (login: string) =>
+    carried.find(({ account }) => account.login === login)?.rows ??
+    next.windows.filter((row) => row.group === login);
+  return { ...next, accounts, windows: accounts.flatMap((account) => rowsFor(account.login)) };
 };
 
 /**
@@ -385,6 +398,9 @@ const fetchBudgets = async (base: string, token: string): Promise<Json | null> =
 };
 
 const REPO_PAGE_LIMIT = 10;
+
+/** A failure worth riding out (network, rate limit, server error), not a lack of access. */
+const isTransient = (status: number): boolean => status === 0 || status === 429 || status >= 500;
 
 /**
  * Minutes this month's summary counts for public repositories, where
@@ -522,6 +538,10 @@ export class GithubService {
     );
 
     const billing: AccountBilling[] = [];
+    // A rate limit or server error is passing: those accounts keep their last rows.
+    const accountsMissing = results.flatMap((result) =>
+      'account' in result || !isTransient(result.status) ? [] : [result.login],
+    );
     for (const result of results) {
       if ('account' in result) {
         billing.push(result);
@@ -533,7 +553,11 @@ export class GithubService {
     }
 
     const usage = buildGithubUsage(login, billing, now, unreadable);
-    return orgsIncomplete ? { ...usage, orgsIncomplete } : usage;
+    return {
+      ...usage,
+      ...(orgsIncomplete ? { orgsIncomplete } : {}),
+      ...(accountsMissing.length > 0 ? { accountsMissing } : {}),
+    };
   }
 
   /**
