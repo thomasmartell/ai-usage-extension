@@ -57,7 +57,7 @@ describe('GitHub billing rows', () => {
 
   it('meters spend against each non-zero budget and skips zero caps', () => {
     const rows = buildAccountRows(
-      { account: org, items: parseBillingItems(summary), budgets: parseBudgets(budgets) },
+      { account: org, items: parseBillingItems(summary), budgets: parseBudgets(budgets, 'acme') },
       NOW,
     );
     assert.deepEqual(
@@ -73,9 +73,10 @@ describe('GitHub billing rows', () => {
 
   it('accepts budgets listed with a SKU array', () => {
     assert.deepEqual(
-      parseBudgets({
-        budgets: [{ budget_product_skus: ['actions', 'packages'], budget_amount: 20 }],
-      }),
+      parseBudgets(
+        { budgets: [{ budget_product_skus: ['actions', 'packages'], budget_amount: 20 }] },
+        'acme',
+      ),
       [
         { sku: 'actions', amount: 20 },
         { sku: 'packages', amount: 20 },
@@ -90,6 +91,64 @@ describe('GitHub billing rows', () => {
     );
     assert.equal(minutes.limit.used, 18000);
     assert.equal(minutes.limit.percentage, 36);
+  });
+
+  it('keeps only organization-wide budgets for this org', () => {
+    const parsed = parseBudgets(
+      {
+        budgets: [
+          {
+            budget_product_sku: 'actions',
+            budget_amount: 50,
+            budget_scope: 'organization',
+            budget_entity_name: 'acme',
+          },
+          {
+            budget_product_sku: 'actions',
+            budget_amount: 5,
+            budget_scope: 'repository',
+            budget_entity_name: 'acme/app',
+          },
+          {
+            budget_product_sku: 'actions',
+            budget_amount: 9,
+            budget_scope: 'cost_center',
+            budget_entity_name: 'ops',
+          },
+          {
+            budget_product_sku: 'actions',
+            budget_amount: 7,
+            budget_scope: 'organization',
+            budget_entity_name: 'other',
+          },
+        ],
+      },
+      'acme',
+    );
+    assert.deepEqual(parsed, [{ sku: 'actions', amount: 50 }]);
+  });
+
+  it('meters a single-SKU budget against that SKU only', () => {
+    const rows = buildAccountRows(
+      {
+        account: org,
+        items: [
+          { product: 'Actions', sku: 'actions_linux', grossQuantity: 100, netAmount: 3 },
+          { product: 'Actions', sku: 'actions_macos', grossQuantity: 10, netAmount: 6 },
+        ],
+        budgets: parseBudgets(
+          {
+            budgets: [
+              { budget_type: 'SkuPricing', budget_product_sku: 'actions_linux', budget_amount: 30 },
+            ],
+          },
+          'acme',
+        ),
+      },
+      NOW,
+    );
+    assert.equal(rows[1].limit.used, 3);
+    assert.equal(rows[1].limit.percentage, 10);
   });
 
   it('omits the minutes row when the plan allowance is unknown', () => {
@@ -172,7 +231,8 @@ describe('GitHub usage request', () => {
         assert.match(path, /year=2026&month=10$/);
         return Response.json(summary);
       }
-      if (path === '/organizations/acme/settings/billing/budgets') return Response.json(budgets);
+      if (path.startsWith('/organizations/acme/settings/billing/budgets'))
+        return Response.json(budgets);
       if (path.startsWith('/users/octo/settings/billing/usage/summary')) {
         return Response.json({ usageItems: [] });
       }
@@ -210,7 +270,8 @@ describe('GitHub usage request', () => {
       if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
         return Response.json(summary);
       }
-      if (path === '/organizations/acme/settings/billing/budgets') return Response.json(budgets);
+      if (path.startsWith('/organizations/acme/settings/billing/budgets'))
+        return Response.json(budgets);
       // An org-owned token cannot read the personal report.
       return new Response('{}', { status: 404 });
     });
@@ -283,6 +344,38 @@ describe('GitHub usage request', () => {
     assert.equal(usage?.windows[0].limit.used, 18260);
     // open-docs only stored artifacts, so it is never summarised.
     assert.ok(!requests.some((path) => path.endsWith('repository=acme/open-docs')));
+  });
+
+  it('reads every page of the budget listing', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path === '/organizations/acme/settings/billing/budgets?per_page=100&page=1') {
+        return Response.json({
+          budgets: [{ budget_product_sku: 'actions', budget_amount: 50 }],
+          has_next_page: true,
+        });
+      }
+      if (path === '/organizations/acme/settings/billing/budgets?per_page=100&page=2') {
+        return Response.json({
+          budgets: [{ budget_product_sku: 'ai_credits', budget_amount: 50 }],
+          has_next_page: false,
+        });
+      }
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(
+      usage?.windows.map((row) => row.id),
+      ['acme:actions-minutes', 'acme:budget:actions', 'acme:budget:ai_credits'],
+    );
   });
 
   it('signs out when GitHub rejects the stored token', async () => {

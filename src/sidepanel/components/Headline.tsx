@@ -32,7 +32,9 @@ export const Headline: React.FC<HeadlineProps> = ({ usage, now }) => {
   const percent = clampPercent(top.peak.limit.percentage);
   const tone = getUsageTone(percent);
   const name = `${top.title} ${splitLabel(top.peak.label).base}`;
-  const updated = Math.max(...peaks.map((entry) => entry.lastUpdated));
+  // The headline's own snapshot: a provider whose last refresh failed keeps
+  // its old one, and must not borrow a fresher provider's time.
+  const updated = top.lastUpdated;
 
   return (
     <div className="au-headline">

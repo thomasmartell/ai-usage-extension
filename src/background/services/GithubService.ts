@@ -57,6 +57,8 @@ export interface BillingItem {
 export interface GithubBudget {
   sku: string;
   amount: number;
+  /** A `SkuPricing` budget names one SKU (e.g. `actions_linux`), not a product. */
+  skuPricing?: boolean;
 }
 
 export interface AccountBilling {
@@ -80,16 +82,29 @@ export const parseBillingItems = (payload: unknown): BillingItem[] => {
   }));
 };
 
-export const parseBudgets = (payload: unknown): GithubBudget[] => {
+/**
+ * Organization-wide budgets from a budget listing. Budgets scoped to a
+ * repository, cost center, user or enterprise are skipped: the org usage
+ * summary cannot say what they have spent.
+ */
+export const parseBudgets = (payload: unknown, org: string): GithubBudget[] => {
   if (!isObject(payload) || !Array.isArray(payload.budgets)) return [];
   return payload.budgets.filter(isObject).flatMap((budget) => {
+    const scope = readString(budget.budget_scope);
+    const entity = readString(budget.budget_entity_name);
+    if (scope && scope !== 'organization') return [];
+    if (entity && entity.toLowerCase() !== org.toLowerCase()) return [];
+
     // The listing returns `budget_product_sku`; GitHub's documented schema
     // also shows a `budget_product_skus` array, so accept either.
     const skus = Array.isArray(budget.budget_product_skus)
       ? budget.budget_product_skus.map(readString)
       : [readString(budget.budget_product_sku)];
     const amount = readNumber(budget.budget_amount);
-    return skus.flatMap((sku) => (sku ? [{ sku, amount }] : []));
+    const skuPricing = readString(budget.budget_type) === 'SkuPricing';
+    return skus.flatMap((sku) =>
+      sku ? [{ sku, amount, ...(skuPricing ? { skuPricing } : {}) }] : [],
+    );
   });
 };
 
@@ -108,7 +123,8 @@ export const billingMonth = (
 };
 
 /** Whether a usage item counts against a budget's product SKU. */
-const inBudget = (item: BillingItem, sku: string): boolean => {
+const inBudget = (item: BillingItem, { sku, skuPricing }: GithubBudget): boolean => {
+  if (skuPricing) return item.sku === sku;
   if (sku === 'ai_credits') return item.product.toLowerCase() === 'copilot';
   return item.product.toLowerCase().replace(/\s+/g, '_') === sku;
 };
@@ -144,9 +160,7 @@ export const buildAccountRows = (
   for (const budget of budgets) {
     if (budget.amount <= 0) continue;
     const spent = roundCents(
-      items
-        .filter((item) => inBudget(item, budget.sku))
-        .reduce((sum, item) => sum + item.netAmount, 0),
+      items.filter((item) => inBudget(item, budget)).reduce((sum, item) => sum + item.netAmount, 0),
     );
     rows.push({
       id: `${account.login}:budget:${budget.sku}`,
@@ -263,16 +277,29 @@ const fetchAccountBilling = async (
 
   // Budgets are only exposed for organizations.
   const [budgets, publicMinutes] = await Promise.all([
-    account.kind === 'organization' ? githubGet(`${base}/budgets`, token) : null,
+    account.kind === 'organization' ? fetchBudgets(base, token) : null,
     fetchPublicMinutes(account, base, token, year, month),
   ]);
 
   return {
     account,
     items: parseBillingItems(summary.data),
-    budgets: budgets?.ok ? parseBudgets(budgets.data) : [],
+    budgets: budgets ? parseBudgets(budgets, account.login) : [],
     publicMinutes,
   };
+};
+
+/** Every page of an org's budget listing (10 per page by default), merged. */
+const BUDGET_PAGE_LIMIT = 10;
+const fetchBudgets = async (base: string, token: string): Promise<Json | null> => {
+  const budgets: unknown[] = [];
+  for (let page = 1; page <= BUDGET_PAGE_LIMIT; page += 1) {
+    const result = await githubGet(`${base}/budgets?per_page=100&page=${page}`, token);
+    if (!result.ok || !isObject(result.data)) return page === 1 ? null : { budgets };
+    if (Array.isArray(result.data.budgets)) budgets.push(...result.data.budgets);
+    if (result.data.has_next_page !== true) break;
+  }
+  return { budgets };
 };
 
 /**
