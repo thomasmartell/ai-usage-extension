@@ -205,14 +205,17 @@ export const carryCredits = (next: NetlifyUsage, previous?: NetlifyUsage): Netli
   if (next.listingFailed && previous && !previous.listingFailed) {
     return { ...previous, unreadable: next.unreadable };
   }
-  const slugs = new Set([...(next.creditsMissing ?? []), ...(next.creditsUnconfirmed ?? [])]);
-  if (slugs.size === 0 || !previous) return next;
+  const missing = new Set(next.creditsMissing);
+  const unconfirmed = new Set(next.creditsUnconfirmed);
+  if ((missing.size === 0 && unconfirmed.size === 0) || !previous) return next;
   // Matched on the team slug that prefixes each row id: names need not be unique.
   const slugOf = (row: ModelUsage) => row.id.slice(0, row.id.lastIndexOf(':'));
+  // A failed lookup keeps all of a team's rows, legacy meters included; a
+  // reply without credits only brings back credit rows (see above).
   const kept = previous.windows.filter(
     (row) =>
-      slugs.has(slugOf(row)) &&
-      row.limit.unit === 'credits' &&
+      (missing.has(slugOf(row)) ||
+        (unconfirmed.has(slugOf(row)) && row.limit.unit === 'credits')) &&
       (row.limit.resetsAt === null || Date.parse(row.limit.resetsAt) > next.lastUpdated),
   );
   if (kept.length === 0) return next;

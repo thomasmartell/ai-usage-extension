@@ -269,6 +269,28 @@ describe('Netlify usage request', () => {
     assert.deepEqual(usage?.unreadable, [{ name: 'Netlify', status: 0 }]);
   });
 
+  it('keeps a legacy team’s meters when its credit lookup fails', () => {
+    const [team] = parseAccounts([account]);
+    const legacy = buildAccountRows(team, buildStatus, true, null);
+    const previous = {
+      teams: [{ slug: 'acme', name: 'Acme team', plan: 'Pro' }],
+      windows: legacy,
+      models: [],
+      status: 'ok' as const,
+      lastUpdated: Date.UTC(2026, 9, 18, 11),
+    };
+    const next = {
+      ...previous,
+      windows: [],
+      creditsMissing: ['acme'],
+      lastUpdated: Date.UTC(2026, 9, 18, 12),
+    };
+    assert.deepEqual(
+      carryCredits(next, previous).windows.map((row) => row.id),
+      ['acme:build-minutes', 'acme:bandwidth'],
+    );
+  });
+
   it('keeps a credit team’s rows over legacy meters from a reply without credits', async () => {
     mock.method(globalThis, 'fetch', async (url: string) => {
       if (url.includes('/accounts?')) return Response.json([account]);
