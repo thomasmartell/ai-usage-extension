@@ -105,6 +105,29 @@ describe('Netlify rows', () => {
     assert.equal(minutes.limit.resetsAt, '2026-11-05T00:00:00.000Z');
   });
 
+  it('takes the plan cycle from its credit allocation when build status is missing', () => {
+    const [team] = parseAccounts([{ ...account, capabilities: {} }]);
+    const withBlocks = {
+      ...credits,
+      active_credit_blocks: [
+        {
+          subscription_allocation: true,
+          effective_date: '2026-10-13T00:00:00.000+00:00',
+          expiry_date: '2026-11-13T00:00:00.000+00:00',
+        },
+        {
+          subscription_allocation: false,
+          effective_date: '2026-06-08T00:00:00.000+00:00',
+          expiry_date: null,
+        },
+      ],
+    };
+    const [plan] = buildAccountRows(team, null, true, withBlocks);
+    assert.equal(plan.id, 'acme:plan-credits');
+    assert.equal(plan.limit.resetsAt, '2026-11-13T00:00:00.000Z');
+    assert.equal(plan.limit.windowMs, 31 * 24 * 60 * 60 * 1000);
+  });
+
   it('falls back to the account capability when build status is unavailable', () => {
     const [team] = parseAccounts([account]);
     const [minutes] = buildAccountRows(team, null, false);

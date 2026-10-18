@@ -62,6 +62,22 @@ const quota = (capabilities: Json, key: string): { used: number; included: numbe
   return used !== null && included !== null && included > 0 ? { used, included } : null;
 };
 
+/** The billing cycle of the plan's monthly credit allocation, when listed. */
+const planCycle = (credits: unknown): { resetsAt: string | null; windowMs?: number } => {
+  const blocks =
+    isObject(credits) && Array.isArray(credits.active_credit_blocks)
+      ? credits.active_credit_blocks
+      : [];
+  const allocation = blocks.find(
+    (block) => isObject(block) && block.subscription_allocation === true,
+  );
+  const start = isObject(allocation) ? readDate(allocation.effective_date) : null;
+  const end = isObject(allocation) ? readDate(allocation.expiry_date) : null;
+  return start !== null && end !== null && end > start
+    ? { resetsAt: new Date(end).toISOString(), windowMs: end - start }
+    : { resetsAt: null };
+};
+
 /** A `{ used, total }` credit pool from the team's credit balance. */
 const creditPool = (credits: unknown, key: string): { used: number; total: number } | null => {
   const pool = isObject(credits) && isObject(credits[key]) ? credits[key] : null;
@@ -106,7 +122,9 @@ export const buildAccountRows = (
       label: msg('netlifyPlanCredits'),
       ...group,
       limit: {
-        ...window,
+        // The cycle comes from the build status; if that failed, from the
+        // plan's own credit allocation, which runs for the same cycle.
+        ...(window.resetsAt ? window : planCycle(credits)),
         percentage: clampPercent((plan.used / plan.total) * 100),
         used: Math.round(plan.used),
         limit: plan.total,

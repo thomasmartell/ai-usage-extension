@@ -620,6 +620,52 @@ describe('GitHub usage request', () => {
     );
   });
 
+  it('treats a rate-limited 403 as passing and keeps the org', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/')) {
+        return Response.json(
+          { message: 'API rate limit exceeded for user ID 1.' },
+          { status: 403, headers: { 'X-RateLimit-Remaining': '0' } },
+        );
+      }
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.accountsMissing, ['acme']);
+    assert.deepEqual(usage?.unreadable, [{ login: 'acme', status: 429 }]);
+  });
+
+  it('puts the last minutes row back when an org’s plan lookup fails', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return new Response('{}', { status: 502 });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path.includes('/budgets')) return Response.json(budgets);
+      if (path.includes('/settings/billing/usage?')) return Response.json({ usageItems: [] });
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.minutesMissing, ['acme']);
+    assert.ok(!usage?.windows.some((row) => row.id === 'acme:actions-minutes'));
+
+    const limit = { percentage: 37, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = {
+      ...usage!,
+      windows: [{ id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit }],
+    };
+    assert.equal(carryBudgets(usage!, previous).windows[0].id, 'acme:actions-minutes');
+  });
+
   it('signs out when GitHub rejects the stored token', async () => {
     mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 401 }));
     assert.equal(await GithubService.fetchUsage(NOW), null);

@@ -245,7 +245,15 @@ const githubGet = async (path: string, token: string): Promise<ApiResult> => {
   });
   if (!response.ok) {
     const acceptedScopes = response.headers.get('X-Accepted-OAuth-Scopes') ?? undefined;
-    return { ok: false, status: response.status, ...(acceptedScopes ? { acceptedScopes } : {}) };
+    // GitHub answers rate limits with 403 as well as 429; report them as 429
+    // so they read as passing rather than as a lack of access.
+    const rateLimited =
+      response.status === 403 &&
+      (response.headers.get('X-RateLimit-Remaining') === '0' ||
+        response.headers.has('Retry-After') ||
+        /rate limit/i.test(await response.text().catch(() => '')));
+    const status = rateLimited ? 429 : response.status;
+    return { ok: false, status, ...(acceptedScopes ? { acceptedScopes } : {}) };
   }
   return { ok: true, data: (await response.json()) as unknown };
 };
@@ -366,9 +374,16 @@ export const carryBudgets = (next: GithubUsage, previous?: GithubUsage): GithubU
   for (const login of next.minutesMissing ?? []) {
     const id = `${login}:actions-minutes`;
     const kept = previous?.windows.find((row) => row.id === id && current(row));
-    windows = kept
-      ? windows.map((row) => (row.id === id ? kept : row))
-      : windows.filter((row) => row.id !== id);
+    if (!kept) {
+      windows = windows.filter((row) => row.id !== id);
+    } else if (windows.some((row) => row.id === id)) {
+      windows = windows.map((row) => (row.id === id ? kept : row));
+    } else {
+      // The plan lookup failed, so no row was built: put the last one back
+      // at the head of its account's rows.
+      const first = windows.findIndex((row) => row.group === login);
+      windows.splice(first < 0 ? windows.length : first, 0, kept);
+    }
   }
 
   for (const login of next.budgetsMissing ?? []) {
@@ -513,9 +528,13 @@ export class GithubService {
     // alongside a pasted token are checked too.
     const orgLogins = [...new Set([...listedOrgs, ...(await readSavedOrgs())])];
 
+    // Orgs whose details failed: no plan means no allowance row, so the last
+    // one stands in (`carryBudgets`) rather than the meter vanishing.
+    const plansMissing: string[] = [];
     const orgAccounts = await Promise.all(
       orgLogins.map(async (org): Promise<GithubAccount> => {
         const details = await githubGet(`/orgs/${org}`, token);
+        if (!details.ok) plansMissing.push(org);
         return {
           login: org,
           kind: 'organization',
@@ -553,8 +572,10 @@ export class GithubService {
     }
 
     const usage = buildGithubUsage(login, billing, now, unreadable);
+    const minutesMissing = [...new Set([...(usage.minutesMissing ?? []), ...plansMissing])];
     return {
       ...usage,
+      ...(minutesMissing.length > 0 ? { minutesMissing } : {}),
       ...(orgsIncomplete ? { orgsIncomplete } : {}),
       ...(accountsMissing.length > 0 ? { accountsMissing } : {}),
     };
