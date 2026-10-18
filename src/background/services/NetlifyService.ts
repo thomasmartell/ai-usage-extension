@@ -178,10 +178,10 @@ export const buildAccountRows = (
  */
 export const carryCredits = (next: NetlifyUsage, previous?: NetlifyUsage): NetlifyUsage => {
   if (!next.creditsMissing?.length || !previous) return next;
+  // Matched on the team slug that prefixes each row id: names need not be unique.
   const kept = previous.windows.filter(
     (row) =>
-      row.group !== undefined &&
-      next.creditsMissing!.includes(row.group) &&
+      next.creditsMissing!.includes(row.id.slice(0, row.id.lastIndexOf(':'))) &&
       row.limit.unit === 'credits' &&
       (row.limit.resetsAt === null || Date.parse(row.limit.resetsAt) > next.lastUpdated),
   );
@@ -265,7 +265,7 @@ export class NetlifyService {
       // (see `carryCredits`). A 404 means the team has no credit balance.
       if (!credits || (!credits.ok && credits.status !== 404)) {
         unreadable.push({ name: account.name, status: credits?.status ?? 0 });
-        creditsMissing.push(account.name);
+        creditsMissing.push(account.slug);
         return [];
       }
       // Always under a team heading, which also carries the cycle's reset date.

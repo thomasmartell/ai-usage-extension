@@ -73,6 +73,8 @@ export interface AccountBilling {
   budgets: GithubBudget[];
   /** The budget listing failed, so `budgets` is empty rather than known. */
   budgetsFailed?: boolean;
+  /** The public-repository lookup failed, so `publicMinutes` is not known. */
+  minutesFailed?: boolean;
   /**
    * Actions minutes (already weighted) run in public repositories. Standard
    * runners are free there, so these never draw on the included minutes.
@@ -205,6 +207,9 @@ export const buildGithubUsage = (
   const budgetsMissing = ordered
     .filter((entry) => entry.budgetsFailed)
     .map((entry) => entry.account.login);
+  const minutesMissing = ordered
+    .filter((entry) => entry.minutesFailed)
+    .map((entry) => entry.account.login);
 
   return {
     viewer,
@@ -213,6 +218,7 @@ export const buildGithubUsage = (
     models: [],
     unreadable,
     ...(budgetsMissing.length > 0 ? { budgetsMissing } : {}),
+    ...(minutesMissing.length > 0 ? { minutesMissing } : {}),
     status: getUsageTone(highest),
     lastUpdated: now,
   };
@@ -299,7 +305,8 @@ const fetchAccountBilling = async (
     items: parseBillingItems(summary.data),
     budgets: budgets ? parseBudgets(budgets, account.login) : [],
     ...(account.kind === 'organization' && !budgets ? { budgetsFailed: true } : {}),
-    publicMinutes,
+    ...(publicMinutes === null ? { minutesFailed: true } : {}),
+    publicMinutes: publicMinutes ?? 0,
   };
 };
 
@@ -308,15 +315,24 @@ const fetchAccountBilling = async (
  * this time, so a passing rate limit does not make budgets vanish.
  */
 export const carryBudgets = (next: GithubUsage, previous?: GithubUsage): GithubUsage => {
-  if (!next.budgetsMissing?.length || !previous) return next;
+  if (!previous || (!next.budgetsMissing?.length && !next.minutesMissing?.length)) return next;
+  // Only rows of the same billing month: an old month's figures are not current.
+  const current = (row: ModelUsage) =>
+    row.limit.resetsAt !== null && Date.parse(row.limit.resetsAt) > next.lastUpdated;
   const windows = [...next.windows];
-  for (const login of next.budgetsMissing) {
-    // Only budgets of the same billing month: an old month's spend is not current.
+
+  // A failed public-repository lookup would overstate the minutes used, so
+  // the last accurate minutes row stands in for this month's.
+  for (const login of next.minutesMissing ?? []) {
+    const id = `${login}:actions-minutes`;
+    const kept = previous.windows.find((row) => row.id === id && current(row));
+    const index = windows.findIndex((row) => row.id === id);
+    if (kept && index >= 0) windows[index] = kept;
+  }
+
+  for (const login of next.budgetsMissing ?? []) {
     const kept = previous.windows.filter(
-      (row) =>
-        row.id.startsWith(`${login}:budget:`) &&
-        row.limit.resetsAt !== null &&
-        Date.parse(row.limit.resetsAt) > next.lastUpdated,
+      (row) => row.id.startsWith(`${login}:budget:`) && current(row),
     );
     if (kept.length === 0) continue;
     const after = windows.map((row) => row.group).lastIndexOf(login);
@@ -332,8 +348,8 @@ const fetchBudgets = async (base: string, token: string): Promise<Json | null> =
   for (let page = 1; page <= BUDGET_PAGE_LIMIT; page += 1) {
     const result = await githubGet(`${base}/budgets?per_page=100&page=${page}`, token);
     // A partial listing would silently drop budgets: treat it as a failure.
-    if (!result.ok || !isObject(result.data)) return null;
-    if (Array.isArray(result.data.budgets)) budgets.push(...result.data.budgets);
+    if (!result.ok || !isObject(result.data) || !Array.isArray(result.data.budgets)) return null;
+    budgets.push(...result.data.budgets);
     if (result.data.has_next_page !== true) break;
   }
   return { budgets };
@@ -345,7 +361,8 @@ const REPO_PAGE_LIMIT = 10;
  * Minutes this month's summary counts for public repositories, where
  * standard runners are free. The detailed report names each repository; any
  * public one with usage is summarised on its own so the same SKU weighting
- * applies. Most months that is no repository, costing two requests.
+ * applies. Most months that is no repository, costing two requests. Null
+ * when any lookup fails: zero would overstate the minutes used.
  */
 const fetchPublicMinutes = async (
   account: GithubAccount,
@@ -353,10 +370,10 @@ const fetchPublicMinutes = async (
   token: string,
   year: number,
   month: number,
-): Promise<number> => {
+): Promise<number | null> => {
   const detailed = await githubGet(`${base}/usage?year=${year}&month=${month}`, token);
   if (!detailed.ok || !isObject(detailed.data) || !Array.isArray(detailed.data.usageItems)) {
-    return 0;
+    return null;
   }
 
   // The live report names repositories bare (`almanac`); GitHub's documented
@@ -376,7 +393,7 @@ const fetchPublicMinutes = async (
   const listed: unknown[] = [];
   for (let page = 1; page <= REPO_PAGE_LIMIT; page += 1) {
     const repos = await githubGet(`${reposPath}&page=${page}`, token);
-    if (!repos.ok || !Array.isArray(repos.data)) break;
+    if (!repos.ok || !Array.isArray(repos.data)) return null;
     listed.push(...repos.data);
     if (repos.data.length < 100) break;
   }
@@ -393,10 +410,11 @@ const fetchPublicMinutes = async (
         `${base}/usage/summary?year=${year}&month=${month}&repository=${account.login}/${name}`,
         token,
       );
-      return summary.ok ? actionsMinutes(parseBillingItems(summary.data)) : 0;
+      return summary.ok ? actionsMinutes(parseBillingItems(summary.data)) : null;
     }),
   );
-  return perRepo.reduce((sum, minutes) => sum + minutes, 0);
+  if (perRepo.includes(null)) return null;
+  return perRepo.reduce<number>((sum, minutes) => sum + (minutes ?? 0), 0);
 };
 
 export class GithubService {

@@ -196,7 +196,7 @@ describe('Netlify usage request', () => {
     const usage = await NetlifyService.fetchUsage(now);
     // The account still reports a legacy minute allowance; it must not return.
     assert.deepEqual(usage?.windows, []);
-    assert.deepEqual(usage?.creditsMissing, ['Acme team']);
+    assert.deepEqual(usage?.creditsMissing, ['acme']);
 
     const [team] = parseAccounts([account]);
     const previous = { ...usage!, windows: buildAccountRows(team, creditStatus, true, credits) };

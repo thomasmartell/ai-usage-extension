@@ -84,6 +84,8 @@ export interface GithubUsage {
   unreadable?: Array<{ login: string; status: number; acceptedScopes?: string }>;
   /** Accounts whose budget listing failed this time (rate limit, outage). */
   budgetsMissing?: string[];
+  /** Accounts whose public-repository minutes could not be read this time. */
+  minutesMissing?: string[];
   status: UsageStatus;
   lastUpdated: number;
 }
@@ -94,7 +96,7 @@ export interface NetlifyUsage {
   windows: ModelUsage[];
   /** Teams (or the team listing) that gave no meters, with the HTTP status that explains it. */
   unreadable?: Array<{ name: string; status: number }>;
-  /** Teams whose credit lookup failed this time, so their last rows are kept. */
+  /** Slugs of teams whose credit lookup failed this time, so their last rows are kept. */
   creditsMissing?: string[];
   models: ModelUsage[];
   status: UsageStatus;
