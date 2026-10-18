@@ -44,13 +44,23 @@ const Skeleton: React.FC = () => (
 
 /** Provider windows longest first (weekly before the 5h session, since the
  *  weekly limits matter most; rows with no window, like budgets, last), then
- *  the model breakdown rows (e.g. Fable) beneath a divider. */
-const cardRows = (usage: ProviderUsage) => ({
-  windows: [...getUsageWindows(usage)].sort(
-    (a, b) => (b.limit.windowMs ?? -1) - (a.limit.windowMs ?? -1),
-  ),
-  models: groupQuietModels(usage.models.map(withInferredWindow)),
-});
+ *  the model breakdown rows (e.g. Fable) beneath a divider. Rows under an
+ *  account or team heading are sorted within it, so each group stays whole. */
+const cardRows = (usage: ProviderUsage) => {
+  const windows = getUsageWindows(usage);
+  const groupOrder = new Map<string | undefined, number>();
+  windows.forEach((row) => {
+    if (!groupOrder.has(row.group)) groupOrder.set(row.group, groupOrder.size);
+  });
+  return {
+    windows: [...windows].sort(
+      (a, b) =>
+        (groupOrder.get(a.group) ?? 0) - (groupOrder.get(b.group) ?? 0) ||
+        (b.limit.windowMs ?? -1) - (a.limit.windowMs ?? -1),
+    ),
+    models: groupQuietModels(usage.models.map(withInferredWindow)),
+  };
+};
 
 /** The figure a card leads with: see `leadUsage`. */
 const leadFigure = (usage: ProviderUsage): { percent: number; caption: string } | null => {

@@ -169,6 +169,41 @@ describe('ProviderCard budget pairs', () => {
   });
 });
 
+describe('ProviderCard groups', () => {
+  it('keeps each account’s rows together while sorting by window', () => {
+    const row = (id: string, group: string, windowMs?: number) => ({
+      id,
+      label: id,
+      group,
+      limit: { percentage: 5, resetsAt: '2026-11-01T00:00:00Z', ...(windowMs ? { windowMs } : {}) },
+    });
+    const html = renderToStaticMarkup(
+      createElement(ProviderCard, {
+        title: 'GitHub',
+        iconSrc: '',
+        iconAlt: '',
+        loading: false,
+        now: NOW,
+        emptyHint: 'empty',
+        usage: {
+          viewer: 'octo',
+          accounts: [],
+          windows: [
+            row('org-a budget', 'org-a'),
+            row('org-a minutes', 'org-a', 1000),
+            row('org-b minutes', 'org-b', 1000),
+            row('org-b budget', 'org-b'),
+          ],
+          models: [],
+          status: 'ok',
+          lastUpdated: NOW,
+        },
+      }),
+    );
+    assert.match(html, /org-a minutes[^]*org-a budget[^]*org-b minutes[^]*org-b budget/);
+  });
+});
+
 describe('Headline', () => {
   it('gives a limit that never resets no reset clause', () => {
     const html = renderToStaticMarkup(
