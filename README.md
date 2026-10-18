@@ -26,6 +26,9 @@ badge.
 - **Netlify build minutes** (optional): paste a Netlify personal access token to
   see each team's build minutes against its included minutes for the current
   billing cycle, and bandwidth when the plan reports it.
+- **Full view**: the expand button opens the dashboard in its own tab, free of
+  the 800×600 popup limit. Claude and Codex sit beside GitHub and Netlify in one
+  row of four on a wide screen, or as a 2×2 grid on a narrower window.
 - **Toolbar badge** showing your highest current usage at a glance.
 - **On-page overlay** on `claude.ai` — a collapsible capsule rendered in a Shadow DOM,
   so it never clashes with the host page's styles.

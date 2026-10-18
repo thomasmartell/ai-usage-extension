@@ -241,5 +241,14 @@
   },
   "openUsagePage": {
     "message": "$1 उपयोग पेज खोलें"
+  },
+  "openFullView": {
+    "message": "पूरा दृश्य खोलें"
+  },
+  "sectionAssistants": {
+    "message": "AI सहायक"
+  },
+  "sectionServices": {
+    "message": "डेवलपर सेवाएँ"
   }
 }

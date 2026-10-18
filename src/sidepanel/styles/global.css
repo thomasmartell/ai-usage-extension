@@ -82,6 +82,11 @@ input {
   padding: 2px 2px 0;
 }
 
+.au-topbar__actions {
+  display: flex;
+  gap: 6px;
+}
+
 .au-headline {
   min-width: 0;
 }
@@ -174,6 +179,76 @@ input {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
   gap: 8px;
+}
+
+/* ---- Full view (its own tab, not the 800×600-capped popup) ---------- */
+
+html[data-view='full'],
+html[data-view='full'] body,
+html[data-view='full'] #root {
+  width: auto;
+  min-height: 100vh;
+}
+
+html[data-view='full'] .au-shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 32px 40px;
+  gap: 20px;
+  zoom: 1.1;
+  background: none;
+}
+
+/* Assistants and services stack as a 2×2 grid, or sit side by side as one
+   row of four on a wide window (a 16-inch MacBook at default scaling). */
+.au-board {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 1400px) {
+  html[data-view='full'] .au-shell {
+    max-width: 1720px;
+    zoom: 1.35;
+  }
+
+  .au-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+html[data-view='full'] body {
+  background:
+    radial-gradient(60% 40% at 10% 0%, rgba(235, 233, 228, 0.05), transparent 70%), var(--au-bg);
+}
+
+html[data-view='full'] .au-headline__title {
+  font-size: 22px;
+}
+
+.au-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.au-section__title {
+  margin: 0;
+  padding-left: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--au-text-faint);
+}
+
+.au-cards--pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+html[data-view='full'] .au-card {
+  padding: 16px 18px;
 }
 
 /* The middle column stacks Codex over Netlify, which are both short. */

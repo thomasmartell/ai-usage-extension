@@ -241,5 +241,14 @@
   },
   "openUsagePage": {
     "message": "Open $1 usage page"
+  },
+  "openFullView": {
+    "message": "Open full view"
+  },
+  "sectionAssistants": {
+    "message": "AI assistants"
+  },
+  "sectionServices": {
+    "message": "Developer services"
   }
 }

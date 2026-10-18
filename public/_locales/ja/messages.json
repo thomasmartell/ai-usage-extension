@@ -241,5 +241,14 @@
   },
   "openUsagePage": {
     "message": "$1 の使用状況ページを開く"
+  },
+  "openFullView": {
+    "message": "全画面表示を開く"
+  },
+  "sectionAssistants": {
+    "message": "AI アシスタント"
+  },
+  "sectionServices": {
+    "message": "開発者サービス"
   }
 }

@@ -241,5 +241,14 @@
   },
   "openUsagePage": {
     "message": "Открыть страницу использования $1"
+  },
+  "openFullView": {
+    "message": "Открыть полный вид"
+  },
+  "sectionAssistants": {
+    "message": "ИИ-ассистенты"
+  },
+  "sectionServices": {
+    "message": "Сервисы для разработчиков"
   }
 }

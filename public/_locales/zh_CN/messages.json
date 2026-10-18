@@ -241,5 +241,14 @@
   },
   "openUsagePage": {
     "message": "打开 $1 用量页面"
+  },
+  "openFullView": {
+    "message": "打开完整视图"
+  },
+  "sectionAssistants": {
+    "message": "AI 助手"
+  },
+  "sectionServices": {
+    "message": "开发者服务"
   }
 }

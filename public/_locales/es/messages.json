@@ -241,5 +241,14 @@
   },
   "openUsagePage": {
     "message": "Abrir la página de uso de $1"
+  },
+  "openFullView": {
+    "message": "Abrir vista completa"
+  },
+  "sectionAssistants": {
+    "message": "Asistentes de IA"
+  },
+  "sectionServices": {
+    "message": "Servicios para desarrolladores"
   }
 }
