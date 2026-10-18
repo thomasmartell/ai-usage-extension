@@ -214,6 +214,8 @@ describe('Netlify usage request', () => {
     const usage = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18));
     assert.deepEqual(usage?.windows, []);
     assert.deepEqual(usage?.unreadable, [{ name: 'Acme team', status: 403 }]);
+    // Access refused, not a passing failure: no last rows are kept.
+    assert.equal(usage?.creditsMissing, undefined);
   });
 
   it('keeps the last credit rows, not legacy meters, when the credit lookup fails', async () => {

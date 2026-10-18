@@ -330,8 +330,11 @@ export class NetlifyService {
         (!credits.ok && credits.status !== 404) ||
         (credits.ok && !isObject(credits.data))
       ) {
-        unreadable.push({ name: account.name, status: credits?.ok ? 0 : (credits?.status ?? 0) });
-        creditsMissing.push(account.slug);
+        const status = credits?.ok ? 0 : (credits?.status ?? 0);
+        unreadable.push({ name: account.name, status });
+        // Only a passing failure (network, rate limit, outage) keeps the last
+        // rows; a refusal (401, 403) means the figures are no longer the user's.
+        if (status === 0 || status === 429 || status >= 500) creditsMissing.push(account.slug);
         return [];
       }
       // A reply without a plan-credit pool reads as a legacy plan, but a

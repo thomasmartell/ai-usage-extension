@@ -80,11 +80,34 @@ describe('GitHub billing rows', () => {
         { budgets: [{ budget_product_skus: ['actions', 'packages'], budget_amount: 20 }] },
         'acme',
       ),
-      [
-        { sku: 'actions', amount: 20 },
-        { sku: 'packages', amount: 20 },
-      ],
+      [{ sku: 'actions+packages', skus: ['actions', 'packages'], amount: 20 }],
     );
+  });
+
+  it('meters a budget covering several products as one row', () => {
+    const [budget] = parseBudgets(
+      {
+        budgets: [{ id: 'b2', budget_product_skus: ['actions', 'ai_credits'], budget_amount: 20 }],
+      },
+      'acme',
+    );
+    const rows = buildAccountRows(
+      { account: { ...org, plan: null }, items: parseBillingItems(summary), budgets: [budget] },
+      NOW,
+    );
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].label, 'Actions + AI credits budget');
+    // No consumed figure: the products' summed spend.
+    assert.equal(rows[0].limit.used, 4.26);
+    const [own] = buildAccountRows(
+      {
+        account: { ...org, plan: null },
+        items: parseBillingItems(summary),
+        budgets: [{ ...budget, consumed: 1 }],
+      },
+      NOW,
+    );
+    assert.equal(own.limit.used, 1);
   });
 
   it('leaves free public-repository minutes out of the allowance', () => {

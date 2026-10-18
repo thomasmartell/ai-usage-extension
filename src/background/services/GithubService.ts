@@ -76,6 +76,8 @@ export interface GithubBudget {
   amount: number;
   /** A `SkuPricing` budget names one SKU (e.g. `actions_linux`), not a product. */
   skuPricing?: boolean;
+  /** Every SKU of a budget that covers several; `sku` then joins them with `+`. */
+  skus?: string[];
   id?: string;
   /**
    * GitHub's own spend against the budget. It counts only usage since the
@@ -130,9 +132,18 @@ export const parseBudgets = (payload: unknown, org: string): GithubBudget[] => {
     const amount = readNumber(budget.budget_amount);
     const skuPricing = readString(budget.budget_type) === 'SkuPricing';
     const id = readString(budget.id);
-    return skus.flatMap((sku) =>
-      sku ? [{ sku, amount, ...(skuPricing ? { skuPricing } : {}), ...(id ? { id } : {}) }] : [],
-    );
+    const named = skus.filter((sku): sku is string => Boolean(sku));
+    if (named.length === 0) return [];
+    // One meter per budget: GitHub caps the SKUs together, not each alone.
+    return [
+      {
+        sku: named.join('+'),
+        amount,
+        ...(named.length > 1 ? { skus: named } : {}),
+        ...(skuPricing ? { skuPricing } : {}),
+        ...(id ? { id } : {}),
+      },
+    ];
   });
 };
 
@@ -156,7 +167,8 @@ export const billingMonth = (
 };
 
 /** Whether a usage item counts against a budget's product SKU. */
-const inBudget = (item: BillingItem, { sku, skuPricing }: GithubBudget): boolean => {
+const inBudget = (item: BillingItem, { sku, skus, skuPricing }: GithubBudget): boolean => {
+  if (skus) return skus.some((one) => inBudget(item, { sku: one, amount: 0, skuPricing }));
   if (skuPricing) return item.sku === sku;
   // The AI credits budget covers the usage-billed `*_ai_credit(s)` SKUs
   // (Copilot, coding agent, code quality, Spark), not Copilot seat licences.
@@ -202,7 +214,10 @@ export const buildAccountRows = (
     );
     rows.push({
       id: `${account.login}:budget:${budget.sku}`,
-      label: msg('githubBudget', BUDGET_PRODUCTS[budget.sku] ?? budget.sku),
+      label: msg(
+        'githubBudget',
+        (budget.skus ?? [budget.sku]).map((sku) => BUDGET_PRODUCTS[sku] ?? sku).join(' + '),
+      ),
       group: account.login,
       // No window length: a budget is a spending cap, so pace against the
       // month says nothing useful.
@@ -439,8 +454,7 @@ export const carryBudgets = (next: GithubUsage, previous?: GithubUsage): GithubU
 /**
  * Each live budget's own consumed amount, from its detail endpoint (the
  * listing leaves it out). A budget created mid-month only counts usage since
- * then, so the month's summary would overstate it. A budget split across
- * several SKUs keeps the summed spend per SKU. Null if any lookup fails, so
+ * then, so the month's summary would overstate it. Null if any lookup fails, so
  * the last rows are kept rather than shown wrong.
  */
 const withConsumption = async (
@@ -448,11 +462,8 @@ const withConsumption = async (
   base: string,
   token: string,
 ): Promise<GithubBudget[] | null> => {
-  const perId = new Map<string, number>();
-  for (const budget of budgets)
-    if (budget.id) perId.set(budget.id, (perId.get(budget.id) ?? 0) + 1);
   const results = await mapLimited(budgets, async (budget) => {
-    if (budget.amount <= 0 || !budget.id || perId.get(budget.id) !== 1) return budget;
+    if (budget.amount <= 0 || !budget.id) return budget;
     const detail = await githubGet(`${base}/budgets/${budget.id}`, token);
     if (!detail.ok || !isObject(detail.data) || typeof detail.data.consumed_amount !== 'number') {
       return null;
