@@ -238,6 +238,23 @@ const netlifyGet = async (path: string, token: string): Promise<ApiResult> => {
   return { ok: true, data: (await response.json()) as unknown };
 };
 
+/**
+ * Every page of the team listing (100 per page), merged. Any failed page,
+ * or a list still full at the page cap, fails the whole listing: a partial
+ * list would drop the teams it missed.
+ */
+const ACCOUNT_PAGE_LIMIT = 10;
+const listAccounts = async (token: string): Promise<ApiResult> => {
+  const accounts: unknown[] = [];
+  for (let page = 1; page <= ACCOUNT_PAGE_LIMIT; page += 1) {
+    const result = await netlifyGet(`/accounts?page=${page}&per_page=100`, token);
+    if (!result.ok || !Array.isArray(result.data)) return result;
+    accounts.push(...result.data);
+    if (result.data.length < 100) return { ok: true, data: accounts };
+  }
+  return { ok: true, data: null };
+};
+
 const readToken = async (): Promise<string | null> => {
   const stored = await chrome.storage.local.get(STORAGE_KEYS.netlifyToken);
   return readString(stored[STORAGE_KEYS.netlifyToken]);
@@ -264,7 +281,7 @@ export class NetlifyService {
     const token = knownToken ?? (await readToken());
     if (!token) return null;
 
-    const listing = await netlifyGet('/accounts', token);
+    const listing = await listAccounts(token);
     // A 200 that is not a team array is as unreadable as a failed request.
     if (!listing.ok || !Array.isArray(listing.data)) {
       // A revoked or expired token: drop it so the popup asks for a new one.

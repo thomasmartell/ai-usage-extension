@@ -177,7 +177,7 @@ describe('Netlify usage request', () => {
     mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
       requests.push(url);
       assert.equal(new Headers(init.headers).get('Authorization'), 'Bearer test-token');
-      if (url === 'https://api.netlify.com/api/v1/accounts') return Response.json([account]);
+      if (url.includes('/api/v1/accounts?')) return Response.json([account]);
       if (url === 'https://api.netlify.com/api/v1/acme/billing/credits') {
         return Response.json(credits);
       }
@@ -199,7 +199,7 @@ describe('Netlify usage request', () => {
   it('fetches with the token it is given rather than re-reading storage', async () => {
     mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
       assert.equal(new Headers(init.headers).get('Authorization'), 'Bearer given-token');
-      return url.endsWith('/accounts') ? Response.json([account]) : Response.json({});
+      return url.includes('/accounts?') ? Response.json([account]) : Response.json({});
     });
     const usage = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18), 'given-token');
     assert.equal(usage?.teams.length, 1);
@@ -207,7 +207,7 @@ describe('Netlify usage request', () => {
 
   it('names a team that gives no meters, with the credit request status', async () => {
     mock.method(globalThis, 'fetch', async (url: string) => {
-      if (url.endsWith('/accounts')) return Response.json([{ ...account, capabilities: {} }]);
+      if (url.includes('/accounts?')) return Response.json([{ ...account, capabilities: {} }]);
       if (url.endsWith('/billing/credits')) return new Response('{}', { status: 403 });
       return Response.json(creditStatus);
     });
@@ -218,7 +218,7 @@ describe('Netlify usage request', () => {
 
   it('keeps the last credit rows, not legacy meters, when the credit lookup fails', async () => {
     mock.method(globalThis, 'fetch', async (url: string) => {
-      if (url.endsWith('/accounts')) return Response.json([account]);
+      if (url.includes('/accounts?')) return Response.json([account]);
       if (url.endsWith('/billing/credits')) return new Response('{}', { status: 429 });
       return Response.json(buildStatus);
     });
@@ -271,7 +271,7 @@ describe('Netlify usage request', () => {
 
   it('keeps a credit team’s rows over legacy meters from a reply without credits', async () => {
     mock.method(globalThis, 'fetch', async (url: string) => {
-      if (url.endsWith('/accounts')) return Response.json([account]);
+      if (url.includes('/accounts?')) return Response.json([account]);
       if (url.endsWith('/billing/credits')) return Response.json({ unexpected: true });
       return Response.json(buildStatus);
     });
@@ -292,6 +292,26 @@ describe('Netlify usage request', () => {
         (row) => row.id === 'acme:build-minutes',
       ),
     );
+  });
+
+  it('follows every page of the team listing', async () => {
+    const pages: string[] = [];
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      if (url.includes('/accounts?')) {
+        pages.push(url.slice(url.indexOf('?')));
+        if (url.includes('page=1&')) {
+          return Response.json(
+            Array.from({ length: 100 }, (_, i) => ({ id: `t${i}`, slug: `team-${i}` })),
+          );
+        }
+        return Response.json([account]);
+      }
+      return Response.json({});
+    });
+    const usage = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18));
+    assert.deepEqual(pages, ['?page=1&per_page=100', '?page=2&per_page=100']);
+    assert.equal(usage?.teams.length, 101);
+    assert.equal(usage?.teams.at(-1)?.slug, 'acme');
   });
 
   it('forgets a token Netlify rejects', async () => {
