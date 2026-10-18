@@ -367,9 +367,17 @@ export class GithubService {
     return (await readToken()) !== null;
   }
 
+  /** The stored token, so a refresh can tell whether it changed meanwhile. */
+  static currentToken(): Promise<string | null> {
+    return readToken();
+  }
+
   /** Usage for the signed-in user and every org whose billing they can read. */
-  static async fetchUsage(now = Date.now()): Promise<GithubUsage | null> {
-    const token = await readToken();
+  static async fetchUsage(
+    now = Date.now(),
+    knownToken: string | null = null,
+  ): Promise<GithubUsage | null> {
+    const token = knownToken ?? (await readToken());
     if (!token) return null;
 
     const user = await githubGet('/user', token);

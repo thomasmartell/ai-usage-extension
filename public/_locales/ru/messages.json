@@ -227,14 +227,23 @@
   "netlifyBandwidth": {
     "message": "Трафик"
   },
+  "netlifyPlanCredits": {
+    "message": "Кредиты тарифа"
+  },
+  "netlifyAddonCredits": {
+    "message": "Дополнительные кредиты"
+  },
   "emptyNetlify": {
-    "message": "Вставьте персональный токен Netlify, чтобы видеть минуты сборки и трафик."
+    "message": "Вставьте персональный токен доступа Netlify, чтобы видеть кредиты, минуты сборки и трафик."
   },
   "netlifyCreateToken": {
     "message": "Создать в Netlify"
   },
   "unitGigabytes": {
     "message": "$1 / $2 ГБ"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 кредитов"
   },
   "cycleShort": {
     "message": "этот период"

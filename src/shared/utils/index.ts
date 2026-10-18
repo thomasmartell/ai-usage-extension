@@ -124,6 +124,11 @@ export const formatCount = ({ used = 0, limit = 0, unit }: UsageLimit): string =
     return msg('unitGigabytes', [gb.format(used), gb.format(limit)]);
   }
 
+  if (unit === 'credits') {
+    const credits = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+    return msg('unitCredits', [credits.format(used), credits.format(limit)]);
+  }
+
   if (unit === 'minutes') {
     const count = new Intl.NumberFormat(undefined);
     return msg('unitMinutes', [count.format(used), count.format(limit)]);

@@ -227,14 +227,23 @@
   "netlifyBandwidth": {
     "message": "बैंडविड्थ"
   },
+  "netlifyPlanCredits": {
+    "message": "प्लान क्रेडिट"
+  },
+  "netlifyAddonCredits": {
+    "message": "अतिरिक्त क्रेडिट"
+  },
   "emptyNetlify": {
-    "message": "बिल्ड मिनट और बैंडविड्थ देखने के लिए Netlify पर्सनल एक्सेस टोकन पेस्ट करें।"
+    "message": "क्रेडिट, बिल्ड मिनट और बैंडविड्थ देखने के लिए Netlify पर्सनल एक्सेस टोकन पेस्ट करें।"
   },
   "netlifyCreateToken": {
     "message": "Netlify पर बनाएँ"
   },
   "unitGigabytes": {
     "message": "$1 / $2 GB"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 क्रेडिट"
   },
   "cycleShort": {
     "message": "इस चक्र"

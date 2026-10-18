@@ -69,6 +69,7 @@ returns the token once they approve it. No other path on this host is called.
 ## host: https://api.netlify.com/*
 
 Optional Netlify tracking. With a personal access token the user pastes, the
-extension reads their teams (`/api/v1/accounts`) and each team's build status
-(`/api/v1/{team}/builds/status`) to show build minutes and bandwidth used
-this billing cycle. It only sends GET requests and never changes anything.
+extension reads their teams (`/api/v1/accounts`), each team's credit balance
+(`/api/v1/{team}/billing/credits`) and build status
+(`/api/v1/{team}/builds/status`) to show credits, build minutes and bandwidth
+used this billing cycle. It only sends GET requests and never changes anything.

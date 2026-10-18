@@ -227,14 +227,23 @@
   "netlifyBandwidth": {
     "message": "带宽"
   },
+  "netlifyPlanCredits": {
+    "message": "套餐额度"
+  },
+  "netlifyAddonCredits": {
+    "message": "附加额度"
+  },
   "emptyNetlify": {
-    "message": "粘贴 Netlify 个人访问令牌以查看构建分钟数和带宽。"
+    "message": "粘贴 Netlify 个人访问令牌，即可查看额度、构建分钟数和带宽。"
   },
   "netlifyCreateToken": {
     "message": "在 Netlify 上创建"
   },
   "unitGigabytes": {
     "message": "$1 / $2 GB"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 额度"
   },
   "cycleShort": {
     "message": "本周期"

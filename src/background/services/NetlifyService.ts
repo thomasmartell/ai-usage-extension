@@ -62,15 +62,26 @@ const quota = (capabilities: Json, key: string): { used: number; included: numbe
   return used !== null && included !== null && included > 0 ? { used, included } : null;
 };
 
+/** A `{ used, total }` credit pool from the team's credit balance. */
+const creditPool = (credits: unknown, key: string): { used: number; total: number } | null => {
+  const pool = isObject(credits) && isObject(credits[key]) ? credits[key] : null;
+  const used = pool ? readAmount(pool.used) : null;
+  const total = pool ? readAmount(pool.total) : null;
+  return used !== null && total ? { used, total } : null;
+};
+
 /**
- * Build-minute and bandwidth meters for one team. Minutes come from the
- * team's build status (what the dashboard's builds page reads), falling back
- * to the account's `build_minutes` capability; bandwidth from capabilities.
+ * Meters for one team. Credit-based plans (current Pro and Free) spend one
+ * pool of credits on deploys, requests and bandwidth: the monthly plan
+ * allowance renews each cycle, purchased add-on credits do not expire.
+ * Legacy plans report build minutes (from the team's build status, falling
+ * back to the account's `build_minutes` capability) and bandwidth instead.
  */
 export const buildAccountRows = (
   account: NetlifyAccount,
   buildStatus: unknown,
   grouped: boolean,
+  credits: unknown = null,
 ): ModelUsage[] => {
   const rows: ModelUsage[] = [];
   const group = grouped ? { group: account.name } : {};
@@ -82,6 +93,38 @@ export const buildAccountRows = (
     periodStart !== null && periodEnd !== null && periodEnd > periodStart
       ? { resetsAt: new Date(periodEnd).toISOString(), windowMs: periodEnd - periodStart }
       : { resetsAt: null };
+
+  const plan = creditPool(credits, 'plan_credits');
+  if (plan) {
+    rows.push({
+      id: `${account.slug}:plan-credits`,
+      label: msg('netlifyPlanCredits'),
+      ...group,
+      limit: {
+        ...window,
+        percentage: clampPercent((plan.used / plan.total) * 100),
+        used: Math.round(plan.used),
+        limit: plan.total,
+        unit: 'credits',
+      },
+    });
+  }
+
+  const addons = creditPool(credits, 'credit_addons');
+  if (addons) {
+    rows.push({
+      id: `${account.slug}:addon-credits`,
+      label: msg('netlifyAddonCredits'),
+      ...group,
+      limit: {
+        resetsAt: null,
+        percentage: clampPercent((addons.used / addons.total) * 100),
+        used: Math.round(addons.used),
+        limit: addons.total,
+        unit: 'credits',
+      },
+    });
+  }
 
   const fallback = quota(account.capabilities, 'build_minutes');
   const used = readAmount(minutes.current) ?? fallback?.used ?? null;
@@ -143,14 +186,25 @@ const readToken = async (): Promise<string | null> => {
   return readString(stored[STORAGE_KEYS.netlifyToken]);
 };
 
+const ignoreFailure = (request: Promise<ApiResult>): Promise<ApiResult | null> =>
+  request.catch(() => null);
+
 export class NetlifyService {
   static async isSignedIn(): Promise<boolean> {
     return (await readToken()) !== null;
   }
 
-  /** Build minutes and bandwidth for every team the token can see. */
-  static async fetchUsage(now = Date.now()): Promise<NetlifyUsage | null> {
-    const token = await readToken();
+  /** The stored token, so a refresh can tell whether it changed meanwhile. */
+  static currentToken(): Promise<string | null> {
+    return readToken();
+  }
+
+  /** Credits, build minutes and bandwidth for every team the token can see. */
+  static async fetchUsage(
+    now = Date.now(),
+    knownToken: string | null = null,
+  ): Promise<NetlifyUsage | null> {
+    const token = knownToken ?? (await readToken());
     if (!token) return null;
 
     const listing = await netlifyGet('/accounts', token);
@@ -161,16 +215,24 @@ export class NetlifyService {
     }
 
     const accounts = parseAccounts(listing.data);
-    const statuses = await Promise.all(
+    const details = await Promise.all(
       accounts.map((account) =>
-        netlifyGet(`/${account.slug}/builds/status`, token).catch(() => null),
+        Promise.all([
+          ignoreFailure(netlifyGet(`/${account.slug}/builds/status`, token)),
+          ignoreFailure(netlifyGet(`/${account.slug}/billing/credits`, token)),
+        ]),
       ),
     );
 
     const windows = accounts.flatMap((account, index) => {
-      const status = statuses[index];
+      const [status, credits] = details[index];
       // Always under a team heading, which also carries the cycle's reset date.
-      return buildAccountRows(account, status?.ok ? status.data : null, true);
+      return buildAccountRows(
+        account,
+        status?.ok ? status.data : null,
+        true,
+        credits?.ok ? credits.data : null,
+      );
     });
     const highest = Math.max(0, ...windows.map((row) => row.limit.percentage));
 

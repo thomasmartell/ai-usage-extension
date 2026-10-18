@@ -10,7 +10,7 @@ export interface UsageLimit {
   /** Length of the rolling window in ms, when the provider reports one. */
   windowMs?: number;
   /** What `used` and `limit` count; absent means a plain request count. */
-  unit?: 'minutes' | 'usd' | 'gb';
+  unit?: 'minutes' | 'usd' | 'gb' | 'credits';
 }
 
 export interface ModelUsage {

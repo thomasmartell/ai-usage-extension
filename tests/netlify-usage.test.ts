@@ -29,7 +29,37 @@ const buildStatus = {
   },
 };
 
+// Credit-based plans report a monthly plan allowance and purchased add-ons,
+// with the minute allowance left null.
+const credits = {
+  plan_credits: { used: '905.7357678068', available: '2094.2642321932', total: '3000.0' },
+  credit_addons: { used: '6009.38', available: '8990.62', total: '15000.0' },
+};
+
+const creditStatus = {
+  minutes: { ...buildStatus.minutes, included_minutes: null, included_minutes_with_packs: null },
+};
+
 describe('Netlify rows', () => {
+  it('meters plan credits over the cycle and add-on credits without a reset', () => {
+    const [team] = parseAccounts([{ ...account, capabilities: {} }]);
+    const rows = buildAccountRows(team, creditStatus, true, credits);
+    assert.deepEqual(
+      rows.map((row) => row.id),
+      ['acme:plan-credits', 'acme:addon-credits'],
+    );
+    const [plan, addons] = rows;
+    assert.equal(plan.label, 'Plan credits');
+    assert.equal(plan.limit.used, 906);
+    assert.equal(plan.limit.limit, 3000);
+    assert.equal(plan.limit.percentage, 30);
+    assert.equal(plan.limit.unit, 'credits');
+    assert.equal(plan.limit.resetsAt, '2026-11-05T00:00:00.000Z');
+    assert.equal(addons.limit.percentage, 40);
+    assert.equal(addons.limit.resetsAt, null);
+    assert.equal(addons.limit.windowMs, undefined);
+  });
+
   it('meters build minutes over the billing cycle and bandwidth in GB', () => {
     const [team] = parseAccounts([account]);
     const [minutes, bandwidth] = buildAccountRows(team, buildStatus, true);
@@ -117,6 +147,9 @@ describe('Netlify usage request', () => {
       requests.push(url);
       assert.equal(new Headers(init.headers).get('Authorization'), 'Bearer test-token');
       if (url === 'https://api.netlify.com/api/v1/accounts') return Response.json([account]);
+      if (url === 'https://api.netlify.com/api/v1/acme/billing/credits') {
+        return Response.json(credits);
+      }
       assert.equal(url, 'https://api.netlify.com/api/v1/acme/builds/status');
       return Response.json(buildStatus);
     });
@@ -125,10 +158,19 @@ describe('Netlify usage request', () => {
     assert.deepEqual(usage?.teams, [{ slug: 'acme', name: 'Acme team', plan: 'Pro' }]);
     assert.deepEqual(
       usage?.windows.map((row) => row.id),
-      ['acme:build-minutes', 'acme:bandwidth'],
+      ['acme:plan-credits', 'acme:addon-credits', 'acme:build-minutes', 'acme:bandwidth'],
     );
     assert.equal(usage?.status, 'ok');
-    assert.equal(requests.length, 2);
+    assert.equal(requests.length, 3);
+  });
+
+  it('fetches with the token it is given rather than re-reading storage', async () => {
+    mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+      assert.equal(new Headers(init.headers).get('Authorization'), 'Bearer given-token');
+      return url.endsWith('/accounts') ? Response.json([account]) : Response.json({});
+    });
+    const usage = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18), 'given-token');
+    assert.equal(usage?.teams.length, 1);
   });
 
   it('forgets a token Netlify rejects', async () => {

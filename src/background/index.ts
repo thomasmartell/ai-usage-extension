@@ -14,6 +14,10 @@ const queueBadgeUpdate = (state: UsageState): Promise<void> => {
   return badgeUpdateQueue;
 };
 
+/** A refresh that starts after any in-flight one, so it reads current tokens. */
+const refreshUsageAfterChange = (): Promise<UsageState> =>
+  (refreshInFlight ?? Promise.resolve()).catch(() => undefined).then(() => refreshUsage());
+
 const refreshUsage = (): Promise<UsageState> => {
   if (refreshInFlight) {
     return refreshInFlight;
@@ -87,13 +91,13 @@ chrome.runtime.onMessage.addListener(
         return respond(refreshUsage(), sendResponse, 'refresh_failed');
       case 'GITHUB_SIGN_IN':
         return respond(
-          GithubService.startSignIn(() => void refreshUsage().catch(() => undefined)),
+          GithubService.startSignIn(() => void refreshUsageAfterChange().catch(() => undefined)),
           sendResponse,
           'sign_in_failed',
         );
       case 'GITHUB_SAVE_TOKEN':
         return respond(
-          GithubService.saveToken(message.token, message.orgs).then(refreshUsage),
+          GithubService.saveToken(message.token, message.orgs).then(refreshUsageAfterChange),
           sendResponse,
           'token_rejected',
         );
@@ -105,7 +109,7 @@ chrome.runtime.onMessage.addListener(
         );
       case 'NETLIFY_SAVE_TOKEN':
         return respond(
-          NetlifyService.saveToken(message.token).then(refreshUsage),
+          NetlifyService.saveToken(message.token).then(refreshUsageAfterChange),
           sendResponse,
           'token_rejected',
         );

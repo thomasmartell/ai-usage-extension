@@ -227,14 +227,23 @@
   "netlifyBandwidth": {
     "message": "Largura de banda"
   },
+  "netlifyPlanCredits": {
+    "message": "Créditos do plano"
+  },
+  "netlifyAddonCredits": {
+    "message": "Créditos adicionais"
+  },
   "emptyNetlify": {
-    "message": "Cole um token de acesso pessoal do Netlify para ver minutos de build e largura de banda."
+    "message": "Cole um token de acesso pessoal do Netlify para ver créditos, minutos de build e largura de banda."
   },
   "netlifyCreateToken": {
     "message": "Criar um no Netlify"
   },
   "unitGigabytes": {
     "message": "$1 / $2 GB"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 créditos"
   },
   "cycleShort": {
     "message": "este ciclo"

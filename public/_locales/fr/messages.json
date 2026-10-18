@@ -227,14 +227,23 @@
   "netlifyBandwidth": {
     "message": "Bande passante"
   },
+  "netlifyPlanCredits": {
+    "message": "Crédits du forfait"
+  },
+  "netlifyAddonCredits": {
+    "message": "Crédits supplémentaires"
+  },
   "emptyNetlify": {
-    "message": "Collez un jeton d’accès personnel Netlify pour voir les minutes de build et la bande passante."
+    "message": "Collez un jeton d’accès personnel Netlify pour voir les crédits, les minutes de build et la bande passante."
   },
   "netlifyCreateToken": {
     "message": "En créer un sur Netlify"
   },
   "unitGigabytes": {
     "message": "$1 / $2 Go"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 crédits"
   },
   "cycleShort": {
     "message": "ce cycle"

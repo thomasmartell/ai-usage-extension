@@ -491,28 +491,31 @@ export class UsageService {
   }
 
   static async refreshAllUsage(): Promise<UsageState> {
+    const [githubToken, netlifyToken] = await Promise.all([
+      GithubService.currentToken(),
+      NetlifyService.currentToken(),
+    ]);
     const [claude, codex, github, netlify] = await Promise.all([
       this.fetchClaudeUsage().catch(() => null),
       this.fetchCodexUsage().catch(() => null),
-      GithubService.fetchUsage().catch(() => null),
-      NetlifyService.fetchUsage().catch(() => null),
+      GithubService.fetchUsage(Date.now(), githubToken).catch(() => null),
+      NetlifyService.fetchUsage(Date.now(), netlifyToken).catch(() => null),
     ]);
 
     const next = await this.getUsageState();
     if (claude) next.claude = claude;
     if (codex) next.codex = codex;
-    // Check sign-in again now rather than trusting the fetch: a sign-out
-    // while this refresh was in flight must not have its snapshot restored.
-    if (github && (await GithubService.isSignedIn())) {
-      next.github = github;
-    } else if (!(await GithubService.isSignedIn())) {
-      delete next.github;
-    }
-    if (netlify && (await NetlifyService.isSignedIn())) {
-      next.netlify = netlify;
-    } else if (!(await NetlifyService.isSignedIn())) {
-      delete next.netlify;
-    }
+    // Read the tokens again rather than trusting the fetch: a sign-out, or a
+    // different token saved, while this refresh was in flight must not have
+    // the old token's snapshot stored.
+    const [githubNow, netlifyNow] = await Promise.all([
+      GithubService.currentToken(),
+      NetlifyService.currentToken(),
+    ]);
+    if (!githubNow) delete next.github;
+    else if (github && githubNow === githubToken) next.github = github;
+    if (!netlifyNow) delete next.netlify;
+    else if (netlify && netlifyNow === netlifyToken) next.netlify = netlify;
 
     await this.saveUsageState(next);
     try {

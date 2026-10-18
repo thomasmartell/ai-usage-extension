@@ -227,14 +227,23 @@
   "netlifyBandwidth": {
     "message": "帯域幅"
   },
+  "netlifyPlanCredits": {
+    "message": "プランのクレジット"
+  },
+  "netlifyAddonCredits": {
+    "message": "追加クレジット"
+  },
   "emptyNetlify": {
-    "message": "Netlify の個人アクセストークンを貼り付けると、ビルド時間と帯域幅が表示されます。"
+    "message": "Netlify の個人アクセストークンを貼り付けると、クレジット、ビルド時間、帯域幅を表示します。"
   },
   "netlifyCreateToken": {
     "message": "Netlify で作成"
   },
   "unitGigabytes": {
     "message": "$1 / $2 GB"
+  },
+  "unitCredits": {
+    "message": "$1 / $2 クレジット"
   },
   "cycleShort": {
     "message": "今期"
