@@ -262,6 +262,13 @@ describe('Netlify usage request', () => {
     assert.deepEqual(kept.unreadable, [{ name: 'Netlify', status: 503 }]);
   });
 
+  it('treats a team listing that is not an array as failed', async () => {
+    mock.method(globalThis, 'fetch', async () => Response.json({ error: 'maintenance' }));
+    const usage = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18));
+    assert.equal(usage?.listingFailed, true);
+    assert.deepEqual(usage?.unreadable, [{ name: 'Netlify', status: 0 }]);
+  });
+
   it('forgets a token Netlify rejects', async () => {
     mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 401 }));
     assert.equal(await NetlifyService.fetchUsage(), null);

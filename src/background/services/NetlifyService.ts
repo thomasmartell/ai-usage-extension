@@ -256,11 +256,12 @@ export class NetlifyService {
     if (!token) return null;
 
     const listing = await netlifyGet('/accounts', token);
-    if (!listing.ok) {
+    // A 200 that is not a team array is as unreadable as a failed request.
+    if (!listing.ok || !Array.isArray(listing.data)) {
       // A revoked or expired token: drop it so the popup asks for a new one.
       // A revoked or expired token: drop it so the popup asks for a new one,
       // unless a different token was saved while this request was waiting.
-      if (listing.status === 401) {
+      if (!listing.ok && listing.status === 401) {
         if ((await readToken()) === token) await this.signOut();
         return null;
       }
@@ -269,7 +270,7 @@ export class NetlifyService {
         teams: [],
         windows: [],
         models: [],
-        unreadable: [{ name: 'Netlify', status: listing.status }],
+        unreadable: [{ name: 'Netlify', status: listing.ok ? 0 : listing.status }],
         listingFailed: true,
         status: 'ok',
         lastUpdated: now,

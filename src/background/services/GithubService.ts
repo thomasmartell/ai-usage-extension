@@ -303,6 +303,11 @@ const fetchAccountBilling = async (
     const { status, acceptedScopes } = summary;
     return { login: account.login, status, ...(acceptedScopes ? { acceptedScopes } : {}) };
   }
+  // A 200 without `usageItems` is not a month of zero usage: report it like a
+  // failed request (status 0), so the account's last rows are kept.
+  if (!isObject(summary.data) || !Array.isArray(summary.data.usageItems)) {
+    return { login: account.login, status: 0 };
+  }
 
   // Budgets are only exposed for organizations.
   const [budgets, publicMinutes] = await Promise.all([
@@ -470,7 +475,9 @@ const fetchPublicMinutes = async (
         `${base}/usage/summary?year=${year}&month=${month}&repository=${account.login}/${name}`,
         token,
       );
-      return summary.ok ? actionsMinutes(parseBillingItems(summary.data)) : null;
+      return summary.ok && isObject(summary.data) && Array.isArray(summary.data.usageItems)
+        ? actionsMinutes(parseBillingItems(summary.data))
+        : null;
     }),
   );
   if (perRepo.includes(null)) return null;

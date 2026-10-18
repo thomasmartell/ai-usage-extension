@@ -666,6 +666,23 @@ describe('GitHub usage request', () => {
     assert.equal(carryBudgets(usage!, previous).windows[0].id, 'acme:actions-minutes');
   });
 
+  it('treats a summary without usageItems as unreadable, not as zero usage', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json({ timePeriod: { year: 2026 } });
+      }
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.accountsMissing, ['acme']);
+    assert.ok(!usage?.windows.some((row) => row.group === 'acme'));
+  });
+
   it('signs out when GitHub rejects the stored token', async () => {
     mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 401 }));
     assert.equal(await GithubService.fetchUsage(NOW), null);

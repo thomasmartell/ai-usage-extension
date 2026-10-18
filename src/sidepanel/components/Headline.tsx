@@ -47,10 +47,12 @@ export const Headline: React.FC<HeadlineProps> = ({ usage, now }) => {
             : msg('headlineClear')}
       </p>
       <p className="au-headline__meta">
-        {percent >= USAGE_THRESHOLDS.warning
-          ? msg('resetsLabel', formatReset(top.peak.limit.resetsAt, now))
-          : msg('headlineHighest', [name, String(percent)])}
-        {' · '}
+        {/* A pool that never resets (Netlify's add-on credits) gets no reset clause. */}
+        {percent < USAGE_THRESHOLDS.warning
+          ? `${msg('headlineHighest', [name, String(percent)])} · `
+          : top.peak.limit.resetsAt
+            ? `${msg('resetsLabel', formatReset(top.peak.limit.resetsAt, now))} · `
+            : ''}
         {msg('updated', formatRelativeTime(updated, now))}
       </p>
     </div>

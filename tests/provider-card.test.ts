@@ -170,6 +170,31 @@ describe('ProviderCard budget pairs', () => {
 });
 
 describe('Headline', () => {
+  it('gives a limit that never resets no reset clause', () => {
+    const html = renderToStaticMarkup(
+      createElement(Headline, {
+        now: NOW,
+        usage: {
+          netlify: {
+            teams: [],
+            windows: [
+              {
+                id: 'acme:addon-credits',
+                label: 'Add-on credits',
+                limit: { percentage: 90, resetsAt: null },
+              },
+            ],
+            models: [],
+            status: 'warning',
+            lastUpdated: NOW,
+          },
+        } as UsageState,
+      }),
+    );
+    assert.match(html, /Netlify Add-on credits limit at 90%/);
+    assert.doesNotMatch(html, /[Rr]esets/);
+  });
+
   it('names a Netlify limit when it is the fullest', () => {
     const html = renderToStaticMarkup(
       createElement(Headline, {
