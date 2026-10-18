@@ -568,6 +568,23 @@ describe('GitHub usage request', () => {
     assert.deepEqual(usage?.budgetsMissing, ['acme']);
   });
 
+  it('treats a budget listing still paging at the cap as a failed listing', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path.includes('/budgets')) return Response.json({ budgets: [], has_next_page: true });
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.budgetsMissing, ['acme']);
+  });
+
   it('treats a budget page without a budgets array as a failed listing', async () => {
     store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
     mock.method(globalThis, 'fetch', async (url: string) => {

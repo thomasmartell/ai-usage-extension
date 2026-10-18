@@ -412,9 +412,10 @@ const fetchBudgets = async (base: string, token: string): Promise<Json | null> =
     // A partial listing would silently drop budgets: treat it as a failure.
     if (!result.ok || !isObject(result.data) || !Array.isArray(result.data.budgets)) return null;
     budgets.push(...result.data.budgets);
-    if (result.data.has_next_page !== true) break;
+    if (result.data.has_next_page !== true) return { budgets };
   }
-  return { budgets };
+  // Still more pages at the cap: incomplete, like any other failed page.
+  return null;
 };
 
 const REPO_PAGE_LIMIT = 10;
