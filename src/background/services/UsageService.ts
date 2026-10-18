@@ -10,7 +10,7 @@ import {
   UsageState,
 } from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
-import { GithubService } from './GithubService';
+import { carryBudgets, GithubService } from './GithubService';
 import { NetlifyService } from './NetlifyService';
 
 const ENDPOINTS = {
@@ -503,6 +503,7 @@ export class UsageService {
     ]);
 
     const next = await this.getUsageState();
+    const previousGithub = next.github;
     if (claude) next.claude = claude;
     if (codex) next.codex = codex;
     // Read the tokens again rather than trusting the fetch: a sign-out, or a
@@ -513,7 +514,8 @@ export class UsageService {
       NetlifyService.currentToken(),
     ]);
     if (!githubNow) delete next.github;
-    else if (github && githubNow === githubToken) next.github = github;
+    else if (github && githubNow === githubToken)
+      next.github = carryBudgets(github, previousGithub);
     if (!netlifyNow) delete next.netlify;
     else if (netlify && netlifyNow === netlifyToken) next.netlify = netlify;
 

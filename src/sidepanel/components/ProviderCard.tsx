@@ -1,5 +1,4 @@
 import React from 'react';
-import { WINDOW_MS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
 import {
   clampPercent,
@@ -10,7 +9,7 @@ import {
 import {
   getUsageWindows,
   groupQuietModels,
-  peakUsage,
+  leadUsage,
   withInferredWindow,
   type ProviderUsage,
 } from '../../shared/usageWindows';
@@ -52,22 +51,19 @@ const cardRows = (usage: ProviderUsage) => ({
   models: groupQuietModels(usage.models.map(withInferredWindow)),
 });
 
-/**
- * The figure a card leads with: its weekly limit when it has one, otherwise
- * its fullest row (GitHub's are monthly).
- */
+/** The figure a card leads with: see `leadUsage`. */
 const leadFigure = (usage: ProviderUsage): { percent: number; caption: string } | null => {
-  const weekly = getUsageWindows(usage).find(
-    (window) => window.limit.windowMs === WINDOW_MS.sevenDays,
-  );
-  if (weekly)
-    return { percent: clampPercent(weekly.limit.percentage), caption: msg('weeklyShort') };
-
-  const peak = peakUsage(usage);
-  if (!peak) return null;
+  const lead = leadUsage(usage);
+  if (!lead) return null;
   return {
-    percent: clampPercent(peak.limit.percentage),
-    caption: 'accounts' in usage ? msg('monthShort') : 'teams' in usage ? msg('cycleShort') : '',
+    percent: clampPercent(lead.row.limit.percentage),
+    caption: lead.weekly
+      ? msg('weeklyShort')
+      : 'accounts' in usage
+        ? msg('monthShort')
+        : 'teams' in usage
+          ? msg('cycleShort')
+          : '',
   };
 };
 

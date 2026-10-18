@@ -71,6 +71,8 @@ export interface AccountBilling {
   account: GithubAccount;
   items: BillingItem[];
   budgets: GithubBudget[];
+  /** The budget listing failed, so `budgets` is empty rather than known. */
+  budgetsFailed?: boolean;
   /**
    * Actions minutes (already weighted) run in public repositories. Standard
    * runners are free there, so these never draw on the included minutes.
@@ -200,12 +202,17 @@ export const buildGithubUsage = (
   const windows = ordered.flatMap((entry) => buildAccountRows(entry, now));
   const highest = Math.max(0, ...windows.map((row) => row.limit.percentage));
 
+  const budgetsMissing = ordered
+    .filter((entry) => entry.budgetsFailed)
+    .map((entry) => entry.account.login);
+
   return {
     viewer,
     accounts: ordered.map((entry) => entry.account),
     windows,
     models: [],
     unreadable,
+    ...(budgetsMissing.length > 0 ? { budgetsMissing } : {}),
     status: getUsageTone(highest),
     lastUpdated: now,
   };
@@ -291,8 +298,25 @@ const fetchAccountBilling = async (
     account,
     items: parseBillingItems(summary.data),
     budgets: budgets ? parseBudgets(budgets, account.login) : [],
+    ...(account.kind === 'organization' && !budgets ? { budgetsFailed: true } : {}),
     publicMinutes,
   };
+};
+
+/**
+ * Keep the last known budget rows for accounts whose budget listing failed
+ * this time, so a passing rate limit does not make budgets vanish.
+ */
+export const carryBudgets = (next: GithubUsage, previous?: GithubUsage): GithubUsage => {
+  if (!next.budgetsMissing?.length || !previous) return next;
+  const windows = [...next.windows];
+  for (const login of next.budgetsMissing) {
+    const kept = previous.windows.filter((row) => row.id.startsWith(`${login}:budget:`));
+    if (kept.length === 0) continue;
+    const after = windows.map((row) => row.group).lastIndexOf(login);
+    windows.splice(after < 0 ? windows.length : after + 1, 0, ...kept);
+  }
+  return { ...next, windows };
 };
 
 /** Every page of an org's budget listing (10 per page by default), merged. */

@@ -102,6 +102,37 @@ describe('ProviderCard layout', () => {
   });
 });
 
+describe('ProviderCard lead figure', () => {
+  it('leads Netlify with plan credits, not add-ons that never reset', () => {
+    const html = renderToStaticMarkup(
+      createElement(ProviderCard, {
+        title: 'Netlify',
+        iconSrc: '',
+        iconAlt: '',
+        loading: false,
+        now: NOW,
+        emptyHint: 'empty',
+        usage: {
+          teams: [{ slug: 'acme', name: 'Acme', plan: 'Pro' }],
+          windows: [
+            { id: 'p', label: 'Plan credits', group: 'Acme', limit: { ...limit, percentage: 30 } },
+            {
+              id: 'a',
+              label: 'Add-on credits',
+              group: 'Acme',
+              limit: { percentage: 40, resetsAt: null },
+            },
+          ],
+          models: [],
+          status: 'ok',
+          lastUpdated: NOW,
+        },
+      }),
+    );
+    assert.match(html, /au-card__peak[^>]*><span>30<small>/);
+  });
+});
+
 describe('Headline', () => {
   it('names a Netlify limit when it is the fullest', () => {
     const html = renderToStaticMarkup(

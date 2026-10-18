@@ -270,6 +270,18 @@ html[data-view='full'] .au-card {
   text-transform: uppercase;
 }
 
+.au-group > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.au-group > span + span {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .au-group:first-child {
   margin-top: 0;
 }

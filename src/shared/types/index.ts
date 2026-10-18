@@ -82,6 +82,8 @@ export interface GithubUsage {
    * GitHub said the endpoint accepts (`X-Accepted-OAuth-Scopes`).
    */
   unreadable?: Array<{ login: string; status: number; acceptedScopes?: string }>;
+  /** Accounts whose budget listing failed this time (rate limit, outage). */
+  budgetsMissing?: string[];
   status: UsageStatus;
   lastUpdated: number;
 }

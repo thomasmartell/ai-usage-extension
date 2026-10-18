@@ -5,6 +5,7 @@ import {
   billingMonth,
   buildAccountRows,
   buildGithubUsage,
+  carryBudgets,
   GithubService,
   parseBillingItems,
   parseBudgets,
@@ -179,6 +180,30 @@ describe('GitHub billing rows', () => {
     );
     assert.equal(usage.windows[1].limit.percentage, 97);
     assert.equal(usage.status, 'critical');
+  });
+});
+
+describe('Budget carry-over', () => {
+  it('keeps the last budget rows when the budget listing fails', () => {
+    const limit = { percentage: 0, resetsAt: null };
+    const previous = buildGithubUsage('octo', [], NOW);
+    previous.windows = [
+      { id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit },
+      { id: 'acme:budget:actions', label: 'Actions budget', group: 'acme', limit },
+      { id: 'octo:actions-minutes', label: 'Actions minutes', group: 'octo', limit },
+    ];
+    const next = {
+      ...previous,
+      windows: [previous.windows[0], previous.windows[2]],
+      budgetsMissing: ['acme'],
+    };
+    assert.deepEqual(
+      carryBudgets(next, previous).windows.map((row) => row.id),
+      ['acme:actions-minutes', 'acme:budget:actions', 'octo:actions-minutes'],
+    );
+    // Nothing to carry when the listing succeeded.
+    const { budgetsMissing: _, ...fresh } = next;
+    assert.equal(carryBudgets(fresh, previous), fresh);
   });
 });
 

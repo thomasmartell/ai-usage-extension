@@ -170,3 +170,22 @@ export const peakUsage = (usage: ProviderUsage): ModelUsage | null => {
 
   return rows.reduce((peak, row) => (row.limit.percentage > peak.limit.percentage ? row : peak));
 };
+
+/**
+ * The row a provider leads with, on its card and in the toolbar icon: its
+ * weekly limit when it has one, otherwise its fullest row that resets
+ * (GitHub's are monthly; Netlify's add-on credits never reset, so the
+ * cycle's plan credits lead instead), otherwise its fullest row.
+ */
+export const leadUsage = (usage: ProviderUsage): { row: ModelUsage; weekly: boolean } | null => {
+  const windows = getUsageWindows(usage);
+  const weekly = windows.find((window) => window.limit.windowMs === WINDOW_MS.sevenDays);
+  if (weekly) return { row: weekly, weekly: true };
+
+  const resetting = windows.filter((row) => row.limit.resetsAt);
+  const row =
+    resetting.length > 0
+      ? resetting.reduce((a, b) => (b.limit.percentage > a.limit.percentage ? b : a))
+      : peakUsage(usage);
+  return row ? { row, weekly: false } : null;
+};

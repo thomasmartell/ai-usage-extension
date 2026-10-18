@@ -170,9 +170,9 @@ export const App = () => {
           {cards.claude}
           <div className="au-column">
             {cards.codex}
-            {cards.netlify}
+            {cards.github}
           </div>
-          {cards.github}
+          {cards.netlify}
         </div>
       )}
     </main>
