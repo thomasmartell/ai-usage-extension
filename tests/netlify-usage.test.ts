@@ -173,6 +173,17 @@ describe('Netlify usage request', () => {
     assert.equal(usage?.teams.length, 1);
   });
 
+  it('names a team that gives no meters, with the credit request status', async () => {
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      if (url.endsWith('/accounts')) return Response.json([{ ...account, capabilities: {} }]);
+      if (url.endsWith('/billing/credits')) return new Response('{}', { status: 403 });
+      return Response.json(creditStatus);
+    });
+    const usage = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18));
+    assert.deepEqual(usage?.windows, []);
+    assert.deepEqual(usage?.unreadable, [{ name: 'Acme team', status: 403 }]);
+  });
+
   it('forgets a token Netlify rejects', async () => {
     mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 401 }));
     assert.equal(await NetlifyService.fetchUsage(), null);

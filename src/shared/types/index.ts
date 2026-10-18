@@ -88,8 +88,10 @@ export interface GithubUsage {
 
 export interface NetlifyUsage {
   teams: Array<{ slug: string; name: string; plan: string | null }>;
-  /** Build-minute and bandwidth rows for the current billing cycle. */
+  /** Credit, build-minute and bandwidth rows for the current billing cycle. */
   windows: ModelUsage[];
+  /** Teams (or the team listing) that gave no meters, with the HTTP status that explains it. */
+  unreadable?: Array<{ name: string; status: number }>;
   models: ModelUsage[];
   status: UsageStatus;
   lastUpdated: number;

@@ -71,7 +71,7 @@ export const App = () => {
         loading={initialLoading}
         now={now}
         emptyHint={msg('emptyNetlify')}
-        footer={<NetlifyConnect auth={netlifyAuth} />}
+        footer={<NetlifyConnect auth={netlifyAuth} usage={usage.netlify} />}
       />
     ),
     github: (

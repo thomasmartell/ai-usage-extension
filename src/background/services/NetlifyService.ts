@@ -210,8 +210,18 @@ export class NetlifyService {
     const listing = await netlifyGet('/accounts', token);
     if (!listing.ok) {
       // A revoked or expired token: drop it so the popup asks for a new one.
-      if (listing.status === 401) await this.signOut();
-      return null;
+      if (listing.status === 401) {
+        await this.signOut();
+        return null;
+      }
+      return {
+        teams: [],
+        windows: [],
+        models: [],
+        unreadable: [{ name: 'Netlify', status: listing.status }],
+        status: 'ok',
+        lastUpdated: now,
+      };
     }
 
     const accounts = parseAccounts(listing.data);
@@ -224,15 +234,22 @@ export class NetlifyService {
       ),
     );
 
+    const unreadable: NonNullable<NetlifyUsage['unreadable']> = [];
     const windows = accounts.flatMap((account, index) => {
       const [status, credits] = details[index];
       // Always under a team heading, which also carries the cycle's reset date.
-      return buildAccountRows(
+      const rows = buildAccountRows(
         account,
         status?.ok ? status.data : null,
         true,
         credits?.ok ? credits.data : null,
       );
+      // Say why a team shows nothing: the credit balance's status (0 when the
+      // request itself failed) is what a credit-based plan depends on.
+      if (rows.length === 0) {
+        unreadable.push({ name: account.name, status: credits?.ok ? 200 : (credits?.status ?? 0) });
+      }
+      return rows;
     });
     const highest = Math.max(0, ...windows.map((row) => row.limit.percentage));
 
@@ -240,6 +257,7 @@ export class NetlifyService {
       teams: accounts.map(({ slug, name, plan }) => ({ slug, name, plan })),
       windows,
       models: [],
+      ...(unreadable.length > 0 ? { unreadable } : {}),
       status: getUsageTone(highest),
       lastUpdated: now,
     };
