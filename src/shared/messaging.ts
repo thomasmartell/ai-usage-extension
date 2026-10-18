@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from './constants';
-import type { ExtensionMessage, RefreshUsageResponse, UsageState } from './types';
+import type { ExtensionMessage, GithubDeviceFlow, MessageResponse, UsageState } from './types';
 
 /**
  * Read the last persisted usage snapshot from `chrome.storage.local`.
@@ -10,13 +10,8 @@ export const readUsageState = async (): Promise<UsageState> => {
   return (data[STORAGE_KEYS.usageState] ?? {}) as UsageState;
 };
 
-/**
- * Ask the background worker to fetch fresh usage for every provider.
- * Resolves with the new snapshot or throws with a descriptive error.
- */
-export const requestUsageRefresh = async (): Promise<UsageState> => {
-  const message: ExtensionMessage = { type: 'REFRESH_USAGE' };
-  const response = (await chrome.runtime.sendMessage(message)) as RefreshUsageResponse | undefined;
+const sendToBackground = async <T>(message: ExtensionMessage): Promise<T> => {
+  const response = (await chrome.runtime.sendMessage(message)) as MessageResponse<T> | undefined;
 
   if (!response) {
     throw new Error('No response from the background worker');
@@ -28,3 +23,18 @@ export const requestUsageRefresh = async (): Promise<UsageState> => {
 
   return response.data;
 };
+
+/**
+ * Ask the background worker to fetch fresh usage for every provider.
+ * Resolves with the new snapshot or throws with a descriptive error.
+ */
+export const requestUsageRefresh = (): Promise<UsageState> =>
+  sendToBackground<UsageState>({ type: 'REFRESH_USAGE' });
+
+/** Start GitHub device-flow sign-in; resolves with the code to show the user. */
+export const requestGithubSignIn = (): Promise<GithubDeviceFlow> =>
+  sendToBackground<GithubDeviceFlow>({ type: 'GITHUB_SIGN_IN' });
+
+/** Forget the stored GitHub token and its usage snapshot. */
+export const requestGithubSignOut = (): Promise<UsageState> =>
+  sendToBackground<UsageState>({ type: 'GITHUB_SIGN_OUT' });

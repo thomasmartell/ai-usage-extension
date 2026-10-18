@@ -1,6 +1,7 @@
 import { REFRESH_ALARM, REFRESH_INTERVAL_MINUTES } from '../shared/constants';
-import type { ExtensionMessage, RefreshUsageResponse, UsageState } from '../shared/types';
+import type { ExtensionMessage, MessageResponse, UsageState } from '../shared/types';
 import { updateBadge } from './badge';
+import { GithubService } from './services/GithubService';
 import { UsageService } from './services/UsageService';
 
 let hasStartedRefresh = false;
@@ -49,21 +50,46 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-chrome.runtime.onMessage.addListener(
-  (message: ExtensionMessage, _sender, sendResponse: (response: RefreshUsageResponse) => void) => {
-    if (message?.type !== 'REFRESH_USAGE') {
-      return undefined;
-    }
-
-    refreshUsage()
-      .then((state) => sendResponse({ success: true, data: state }))
-      .catch((error: unknown) => {
-        sendResponse({
-          success: false,
-          error: error instanceof Error ? error.message : 'refresh_failed',
-        });
+const respond = <T>(
+  work: Promise<T>,
+  sendResponse: (response: MessageResponse<T>) => void,
+  fallbackError: string,
+): true => {
+  work
+    .then((data) => sendResponse({ success: true, data }))
+    .catch((error: unknown) => {
+      sendResponse({
+        success: false,
+        error: error instanceof Error ? error.message : fallbackError,
       });
+    });
+  return true;
+};
 
-    return true;
+const signOutOfGithub = async (): Promise<UsageState> => {
+  await GithubService.signOut();
+  const state = await UsageService.getUsageState();
+  delete state.github;
+  await UsageService.saveUsageState(state);
+  await queueBadgeUpdate(state);
+  return state;
+};
+
+chrome.runtime.onMessage.addListener(
+  (message: ExtensionMessage, _sender, sendResponse: (response: MessageResponse) => void) => {
+    switch (message?.type) {
+      case 'REFRESH_USAGE':
+        return respond(refreshUsage(), sendResponse, 'refresh_failed');
+      case 'GITHUB_SIGN_IN':
+        return respond(
+          GithubService.startSignIn(() => void refreshUsage().catch(() => undefined)),
+          sendResponse,
+          'sign_in_failed',
+        );
+      case 'GITHUB_SIGN_OUT':
+        return respond(signOutOfGithub(), sendResponse, 'sign_out_failed');
+      default:
+        return undefined;
+    }
   },
 );

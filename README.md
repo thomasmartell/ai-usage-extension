@@ -13,12 +13,18 @@ badge.
 - **Live limits** for Claude and Codex: percentage used, raw counts, and time to reset.
   Codex windows are labelled from the duration returned by the service rather than
   assuming fixed primary and secondary periods.
+- **GitHub allowances** (optional): sign in with GitHub's device code to see this
+  month's Actions minutes against your plan's included minutes, and spend against
+  each organization budget, for your account and every organization whose billing
+  you can read. The allowance comes from the plan (Free 2,000, Pro and Team 3,000,
+  Enterprise 50,000 minutes), since GitHub's billing API does not report it.
 - **Toolbar badge** showing your highest current usage at a glance.
 - **On-page overlay** on `claude.ai` — a collapsible capsule rendered in a Shadow DOM,
   so it never clashes with the host page's styles.
 - **Background refresh** every 5 minutes via `chrome.alarms`, plus on-demand refresh.
 - **Private by design**: usage is read from your own authenticated sessions with
-  Claude and OpenAI. No external servers, no accounts, no tracking.
+  Claude and OpenAI, and from GitHub's API with a token only you grant. No external
+  servers, no accounts, no tracking.
 
 ## Install
 

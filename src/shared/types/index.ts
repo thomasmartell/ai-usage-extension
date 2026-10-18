@@ -1,6 +1,6 @@
 export type UsageStatus = 'ok' | 'warning' | 'critical';
 
-export type ProviderId = 'claude' | 'codex';
+export type ProviderId = 'claude' | 'codex' | 'github';
 
 export interface UsageLimit {
   percentage: number;
@@ -9,6 +9,8 @@ export interface UsageLimit {
   limit?: number;
   /** Length of the rolling window in ms, when the provider reports one. */
   windowMs?: number;
+  /** What `used` and `limit` count; absent means a plain request count. */
+  unit?: 'minutes' | 'usd';
 }
 
 export interface ModelUsage {
@@ -58,9 +60,39 @@ export interface CodexUsage {
   raw?: Record<string, unknown>;
 }
 
+/** A GitHub account whose billing usage the signed-in user can read. */
+export interface GithubAccount {
+  login: string;
+  kind: 'user' | 'organization';
+  /** Plan name as GitHub reports it, e.g. `pro` or `enterprise`. */
+  plan: string | null;
+}
+
+export interface GithubUsage {
+  /** Login of the user the stored token belongs to. */
+  viewer: string;
+  accounts: GithubAccount[];
+  /** Monthly allowance and budget rows across every readable account. */
+  windows: ModelUsage[];
+  models: ModelUsage[];
+  status: UsageStatus;
+  lastUpdated: number;
+}
+
+/** A device-flow sign-in waiting for the user to enter its code on github.com. */
+export interface GithubDeviceFlow {
+  userCode: string;
+  verificationUri: string;
+  /** Epoch ms after which the code stops working. */
+  expiresAt: number;
+  /** Set when the last attempt failed, so the popup can say why. */
+  error?: string;
+}
+
 export interface UsageState {
   claude?: ClaudeUsage;
   codex?: CodexUsage;
+  github?: GithubUsage;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -68,7 +100,10 @@ export interface UsageState {
 /* -------------------------------------------------------------------------- */
 
 /** Messages sent to the background service worker. */
-export type ExtensionMessage = { type: 'REFRESH_USAGE' };
+export type ExtensionMessage =
+  | { type: 'REFRESH_USAGE' }
+  | { type: 'GITHUB_SIGN_IN' }
+  | { type: 'GITHUB_SIGN_OUT' };
 
 /** Response returned by the background worker for a given message. */
 export type MessageResponse<T = unknown> =

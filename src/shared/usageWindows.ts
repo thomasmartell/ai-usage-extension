@@ -1,8 +1,8 @@
 import { WINDOW_MS } from './constants';
 import { msg } from './i18n';
-import type { ClaudeUsage, CodexUsage, ModelUsage, UsageLimit } from './types';
+import type { ClaudeUsage, CodexUsage, GithubUsage, ModelUsage, UsageLimit } from './types';
 
-export type ProviderUsage = ClaudeUsage | CodexUsage;
+export type ProviderUsage = ClaudeUsage | CodexUsage | GithubUsage;
 
 /**
  * Claude's two provider windows are fixed at 5h and 7d, so snapshots written
@@ -60,6 +60,10 @@ export const getUsageWindows = (usage: ProviderUsage): ModelUsage[] => {
         limit: withWindow(usage.weekly, WINDOW_MS.sevenDays),
       },
     ];
+  }
+
+  if ('accounts' in usage) {
+    return usage.windows;
   }
 
   if (Array.isArray(usage.windows)) {

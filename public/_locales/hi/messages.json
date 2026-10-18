@@ -142,5 +142,44 @@
   },
   "timeMinuteShort": {
     "message": "मि."
+  },
+  "emptyGithub": {
+    "message": "अपने खाते और संगठनों के Actions मिनट और बजट खर्च देखने के लिए साइन इन करें।"
+  },
+  "githubActionsMinutes": {
+    "message": "$1 · Actions मिनट"
+  },
+  "githubBudget": {
+    "message": "$1 · $2 बजट"
+  },
+  "githubSignIn": {
+    "message": "GitHub से साइन इन करें"
+  },
+  "githubSignOut": {
+    "message": "साइन आउट"
+  },
+  "githubCancel": {
+    "message": "रद्द करें"
+  },
+  "githubEnterCode": {
+    "message": "GitHub पर यह कोड दर्ज करें:"
+  },
+  "githubOpenAndCopy": {
+    "message": "कोड कॉपी करें और GitHub खोलें"
+  },
+  "githubWaiting": {
+    "message": "स्वीकृति की प्रतीक्षा…"
+  },
+  "githubSignInFailed": {
+    "message": "साइन इन पूरा नहीं हुआ ($1)। फिर से कोशिश करें।"
+  },
+  "githubSignedInAs": {
+    "message": "$1 के रूप में साइन इन"
+  },
+  "githubNoBilling": {
+    "message": "यह खाता कोई बिलिंग डेटा नहीं पढ़ सकता।"
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 मिनट"
   }
 }

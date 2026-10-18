@@ -1,0 +1,73 @@
+import React from 'react';
+import { msg } from '../../shared/i18n';
+import type { GithubUsage } from '../../shared/types';
+import type { GithubAuth } from '../hooks/useGithubAuth';
+
+interface GithubConnectProps {
+  auth: GithubAuth;
+  usage?: GithubUsage;
+  now: number;
+}
+
+const openVerification = async (code: string, url: string): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(code);
+  } catch {
+    // The code stays on screen, so a blocked clipboard only costs a retype.
+  }
+  await chrome.tabs.create({ url });
+};
+
+/** Sign-in, pending-code and signed-in footers for the GitHub card. */
+export const GithubConnect: React.FC<GithubConnectProps> = ({ auth, usage, now }) => {
+  const { signedIn, deviceFlow, starting, error, signIn, signOut } = auth;
+
+  if (signedIn) {
+    return (
+      <>
+        {usage && usage.windows.length === 0 && (
+          <p className="au-empty">{msg('githubNoBilling')}</p>
+        )}
+        <p className="au-footnote au-github__account">
+          {usage && <span>{msg('githubSignedInAs', usage.viewer)}</span>}
+          <button type="button" className="au-link-btn" onClick={() => void signOut()}>
+            {msg('githubSignOut')}
+          </button>
+        </p>
+      </>
+    );
+  }
+
+  const pending = deviceFlow && !deviceFlow.error && deviceFlow.expiresAt > now ? deviceFlow : null;
+  if (pending) {
+    return (
+      <div className="au-github__pending">
+        <p className="au-footnote">{msg('githubEnterCode')}</p>
+        <p className="au-github__code">{pending.userCode}</p>
+        <button
+          type="button"
+          className="au-btn"
+          onClick={() => void openVerification(pending.userCode, pending.verificationUri)}
+        >
+          {msg('githubOpenAndCopy')}
+        </button>
+        <p className="au-footnote au-github__account">
+          <span>{msg('githubWaiting')}</span>
+          <button type="button" className="au-link-btn" onClick={() => void signOut()}>
+            {msg('githubCancel')}
+          </button>
+        </p>
+      </div>
+    );
+  }
+
+  const failure = error ?? deviceFlow?.error ?? null;
+  return (
+    <div className="au-github__pending">
+      {failure && <p className="au-footnote">{msg('githubSignInFailed', failure)}</p>}
+      <button type="button" className="au-btn" disabled={starting} onClick={() => void signIn()}>
+        {msg('githubSignIn')}
+      </button>
+    </div>
+  );
+};

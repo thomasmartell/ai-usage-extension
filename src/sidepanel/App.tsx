@@ -1,9 +1,12 @@
 import claudeBrandAsset from '../assets/brands/claude-anthropic.jpg';
 import codexBrandAsset from '../assets/brands/codex-openai.jpg';
+import githubBrandAsset from '../assets/brands/github.svg';
 import { msg } from '../shared/i18n';
 import { codexDiagnostics, DIAGNOSTIC_BUILD } from '../shared/diagnostics';
 import { useNow } from '../shared/hooks/useNow';
+import { GithubConnect } from './components/GithubConnect';
 import { ProviderCard } from './components/ProviderCard';
+import { useGithubAuth } from './hooks/useGithubAuth';
 import { useUsageData } from './hooks/useUsageData';
 import './styles/global.css';
 
@@ -21,9 +24,10 @@ export const App = () => {
     setCodexOverlayEnabled,
     setSettingsExpanded,
   } = useUsageData();
+  const githubAuth = useGithubAuth();
   const now = useNow(30_000);
 
-  const initialLoading = loading && !usage.claude && !usage.codex;
+  const initialLoading = loading && !usage.claude && !usage.codex && !usage.github;
 
   return (
     <main className="au-shell">
@@ -78,6 +82,16 @@ export const App = () => {
           loading={initialLoading}
           now={now}
           emptyHint={msg('emptyCodex')}
+        />
+        <ProviderCard
+          title="GitHub"
+          iconSrc={githubBrandAsset}
+          iconAlt="GitHub"
+          usage={usage.github}
+          loading={initialLoading}
+          now={now}
+          emptyHint={msg('emptyGithub')}
+          footer={<GithubConnect auth={githubAuth} usage={usage.github} now={now} />}
         />
       </div>
 

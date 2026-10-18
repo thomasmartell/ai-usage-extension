@@ -1,6 +1,6 @@
 import { USAGE_THRESHOLDS } from '../constants';
 import { msg } from '../i18n';
-import type { UsageStatus } from '../types';
+import type { UsageLimit, UsageStatus } from '../types';
 
 /** @deprecated kept as an alias — prefer `UsageStatus` from shared/types. */
 export type UsageTone = UsageStatus;
@@ -104,4 +104,19 @@ export const formatRelativeTime = (timestamp: number, now: number): string => {
   }
 
   return msg('timeAgo', `${Math.floor(hours / 24)}${msg('timeDayShort')}`);
+};
+
+/** `used / limit` in the limit's unit, e.g. `18,249 / 50,000 min` or `$12.40 / $50.00`. */
+export const formatCount = ({ used = 0, limit = 0, unit }: UsageLimit): string => {
+  if (unit === 'usd') {
+    const usd = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
+    return `${usd.format(used)} / ${usd.format(limit)}`;
+  }
+
+  if (unit === 'minutes') {
+    const count = new Intl.NumberFormat(undefined);
+    return msg('unitMinutes', [count.format(used), count.format(limit)]);
+  }
+
+  return `${used} / ${limit}`;
 };

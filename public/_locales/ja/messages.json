@@ -142,5 +142,44 @@
   },
   "timeMinuteShort": {
     "message": "分"
+  },
+  "emptyGithub": {
+    "message": "サインインすると、アカウントと組織の Actions 分数と予算の使用額が表示されます。"
+  },
+  "githubActionsMinutes": {
+    "message": "$1 · Actions 分数"
+  },
+  "githubBudget": {
+    "message": "$1 · $2 予算"
+  },
+  "githubSignIn": {
+    "message": "GitHub でサインイン"
+  },
+  "githubSignOut": {
+    "message": "サインアウト"
+  },
+  "githubCancel": {
+    "message": "キャンセル"
+  },
+  "githubEnterCode": {
+    "message": "GitHub でこのコードを入力してください:"
+  },
+  "githubOpenAndCopy": {
+    "message": "コードをコピーして GitHub を開く"
+  },
+  "githubWaiting": {
+    "message": "承認を待っています…"
+  },
+  "githubSignInFailed": {
+    "message": "サインインが完了しませんでした ($1)。もう一度お試しください。"
+  },
+  "githubSignedInAs": {
+    "message": "$1 としてサインイン中"
+  },
+  "githubNoBilling": {
+    "message": "このアカウントは請求データを読み取れません。"
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 分"
   }
 }

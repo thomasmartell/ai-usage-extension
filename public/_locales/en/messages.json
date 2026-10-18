@@ -142,5 +142,44 @@
   },
   "timeMinuteShort": {
     "message": "m"
+  },
+  "emptyGithub": {
+    "message": "Sign in to see Actions minutes and budget spend for your account and organizations."
+  },
+  "githubActionsMinutes": {
+    "message": "$1 · Actions minutes"
+  },
+  "githubBudget": {
+    "message": "$1 · $2 budget"
+  },
+  "githubSignIn": {
+    "message": "Sign in with GitHub"
+  },
+  "githubSignOut": {
+    "message": "Sign out"
+  },
+  "githubCancel": {
+    "message": "Cancel"
+  },
+  "githubEnterCode": {
+    "message": "Enter this code on GitHub:"
+  },
+  "githubOpenAndCopy": {
+    "message": "Copy code and open GitHub"
+  },
+  "githubWaiting": {
+    "message": "Waiting for approval…"
+  },
+  "githubSignInFailed": {
+    "message": "Sign-in didn’t finish ($1). Try again."
+  },
+  "githubSignedInAs": {
+    "message": "Signed in as $1"
+  },
+  "githubNoBilling": {
+    "message": "This account can’t read any billing usage."
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 min"
   }
 }

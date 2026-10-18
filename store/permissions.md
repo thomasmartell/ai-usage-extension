@@ -49,3 +49,17 @@ The legacy ChatGPT host that still resolves for some accounts. Same usage as
 `chatgpt.com` above: reading the user's own rate-limit data via their existing
 session and rendering the on-page overlay. Kept so signed-in users who land on
 the legacy domain see the same experience.
+
+## host: https://api.github.com/*
+
+Optional GitHub tracking. After the user signs in, the extension reads their
+own monthly billing usage (`/users/{login}/settings/billing/usage/summary`),
+the organizations they belong to, and, for organizations they administer, the
+billing usage summary and budgets. Requests carry the token the user granted;
+nothing is written to GitHub.
+
+## host: https://github.com/login/*
+
+Used only for GitHub's OAuth device flow: `/login/device/code` issues the
+one-time code the user enters on github.com, and `/login/oauth/access_token`
+returns the token once they approve it. No other path on this host is called.

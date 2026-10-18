@@ -2,7 +2,7 @@ import React from 'react';
 import { msg } from '../../shared/i18n';
 import { paceFromLimit } from '../../shared/pace';
 import type { UsageLimit } from '../../shared/types';
-import { formatDuration, formatReset } from '../../shared/utils';
+import { formatCount, formatDuration, formatReset } from '../../shared/utils';
 import { ProgressBar } from './ProgressBar';
 
 interface UsageMetricProps {
@@ -30,9 +30,7 @@ export const UsageMetric: React.FC<UsageMetricProps> = ({
       <p className="au-meta">
         {hasCount && (
           <>
-            <span>
-              {limit.used} / {limit.limit}
-            </span>
+            <span>{formatCount(limit)}</span>
             {' · '}
           </>
         )}

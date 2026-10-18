@@ -57,6 +57,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
       : msg('notConnected');
 
   const rows = usage && !loading ? cardRows(usage) : [];
+  const resets = usage && 'resets' in usage ? usage.resets : undefined;
 
   return (
     <UsageCard title={title} subtitle={subtitle} iconSrc={iconSrc} iconAlt={iconAlt}>
@@ -76,12 +77,12 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
           {'plan' in usage && usage.plan !== 'unknown' && (
             <p className="au-footnote">{msg('planLabel', usage.plan)}</p>
           )}
-          {usage.resets?.map((reset) => (
+          {resets?.map((reset) => (
             <p key={reset.id} className="au-footnote">
               {msg('resetExpiresLabel', [reset.label, formatExpiryDate(reset.expiresAt)])}
             </p>
           ))}
-          {usage.resets === undefined &&
+          {resets === undefined &&
             'availableResets' in usage &&
             usage.availableResets !== null &&
             usage.availableResets > 0 && (

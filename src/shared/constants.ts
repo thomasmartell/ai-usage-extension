@@ -16,6 +16,10 @@ export const STORAGE_KEYS = {
   claudeOverlayCollapsed: 'claude_overlay_collapsed',
   codexOverlayEnabled: 'codex_overlay_enabled',
   codexOverlayCollapsed: 'codex_overlay_collapsed',
+  /** OAuth token from GitHub's device flow; read only by the background worker. */
+  githubToken: 'github_token',
+  /** Device-flow sign-in in progress (`GithubDeviceFlow`), shown by the popup. */
+  githubDeviceFlow: 'github_device_flow',
   /** Whether the sidepanel's settings section is expanded. */
   settingsExpanded: 'settings_expanded',
 } as const;
@@ -36,4 +40,14 @@ export const WINDOW_MS = {
 export const USAGE_THRESHOLDS = {
   warning: 75,
   critical: 92,
+} as const;
+
+/**
+ * GitHub OAuth App used for device-flow sign-in. A client id is public by
+ * design; the device flow needs no client secret.
+ */
+export const GITHUB_OAUTH = {
+  clientId: 'Ov23litw7j2JC0ecJHVP',
+  /** `user` reads the personal billing report; `read:org` lists the orgs to check. */
+  scopes: 'read:org user',
 } as const;

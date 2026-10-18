@@ -1,0 +1,242 @@
+import assert from 'node:assert/strict';
+import { afterEach, beforeEach, describe, it, mock } from 'node:test';
+import {
+  billingMonth,
+  buildAccountRows,
+  buildGithubUsage,
+  GithubService,
+  parseBillingItems,
+  parseBudgets,
+} from '../src/background/services/GithubService';
+
+// Synthetic billing values in the shape of GitHub's usage summary; no account data or tokens.
+const NOW = Date.UTC(2026, 9, 18, 12);
+
+const summary = {
+  usageItems: [
+    { product: 'Actions', sku: 'actions_linux', grossQuantity: 18223, netAmount: 0 },
+    { product: 'Actions', sku: 'actions_macos', grossQuantity: 26, netAmount: 0 },
+    { product: 'Actions', sku: 'actions_storage', grossQuantity: 39.1, netAmount: 0 },
+    { product: 'Copilot', sku: 'copilot_ai_unit', grossQuantity: 100, netAmount: 4.256 },
+  ],
+};
+
+const budgets = {
+  budgets: [
+    { budget_product_sku: 'actions', budget_amount: 50 },
+    { budget_product_sku: 'ai_credits', budget_amount: 50 },
+    { budget_product_sku: 'codespaces', budget_amount: 0 },
+  ],
+};
+
+const org = { login: 'acme', kind: 'organization' as const, plan: 'enterprise' };
+
+describe('GitHub billing rows', () => {
+  it('bills by UTC calendar month', () => {
+    const month = billingMonth(NOW);
+    assert.equal(month.year, 2026);
+    assert.equal(month.month, 10);
+    assert.equal(new Date(month.end).toISOString(), '2026-11-01T00:00:00.000Z');
+  });
+
+  it('counts runner minutes at their multipliers against the plan allowance', () => {
+    const [minutes] = buildAccountRows(
+      { account: org, items: parseBillingItems(summary), budgets: [] },
+      NOW,
+    );
+    // 18,223 Linux + 26 macOS × 10; storage is not minutes.
+    assert.equal(minutes.limit.used, 18483);
+    assert.equal(minutes.limit.limit, 50000);
+    assert.equal(minutes.limit.percentage, 37);
+    assert.equal(minutes.limit.unit, 'minutes');
+    assert.equal(minutes.limit.resetsAt, '2026-11-01T00:00:00.000Z');
+    assert.equal(minutes.limit.windowMs, 31 * 24 * 60 * 60 * 1000);
+    assert.equal(minutes.label, 'acme · Actions minutes');
+  });
+
+  it('meters spend against each non-zero budget and skips zero caps', () => {
+    const rows = buildAccountRows(
+      { account: org, items: parseBillingItems(summary), budgets: parseBudgets(budgets) },
+      NOW,
+    );
+    assert.deepEqual(
+      rows.map((row) => [row.label, row.limit.used, row.limit.limit, row.limit.percentage]),
+      [
+        ['acme · Actions minutes', 18483, 50000, 37],
+        ['acme · Actions budget', 0, 50, 0],
+        ['acme · AI credits budget', 4.26, 50, 9],
+      ],
+    );
+    assert.equal(rows[1].limit.unit, 'usd');
+  });
+
+  it('omits the minutes row when the plan allowance is unknown', () => {
+    const rows = buildAccountRows(
+      { account: { ...org, plan: null }, items: parseBillingItems(summary), budgets: [] },
+      NOW,
+    );
+    assert.deepEqual(rows, []);
+  });
+
+  it('lists organizations before the personal account and takes the worst tone', () => {
+    const usage = buildGithubUsage(
+      'octo',
+      [
+        {
+          account: { login: 'octo', kind: 'user', plan: 'pro' },
+          items: [{ product: 'Actions', sku: 'actions_linux', grossQuantity: 2900, netAmount: 0 }],
+          budgets: [],
+        },
+        { account: org, items: parseBillingItems(summary), budgets: [] },
+      ],
+      NOW,
+    );
+    assert.deepEqual(
+      usage.accounts.map((account) => account.login),
+      ['acme', 'octo'],
+    );
+    assert.equal(usage.windows[1].limit.percentage, 97);
+    assert.equal(usage.status, 'critical');
+  });
+});
+
+describe('GitHub usage request', () => {
+  let store: Record<string, unknown>;
+
+  beforeEach(() => {
+    store = { github_token: 'test-token' };
+    (globalThis as { chrome?: unknown }).chrome = {
+      storage: {
+        local: {
+          get: async (keys: string | string[]) =>
+            Object.fromEntries(
+              [keys].flat().filter((key) => key in store).map((key) => [key, store[key]]),
+            ),
+          set: async (items: Record<string, unknown>) => void Object.assign(store, items),
+          remove: async (keys: string | string[]) => {
+            for (const key of [keys].flat()) delete store[key];
+          },
+        },
+      },
+    };
+  });
+
+  afterEach(() => {
+    mock.restoreAll();
+    mock.timers.reset();
+    delete (globalThis as { chrome?: unknown }).chrome;
+  });
+
+  it('reads the user and every org it can bill, skipping orgs it cannot', async () => {
+    const requests: string[] = [];
+    mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+      requests.push(url);
+      assert.equal(new Headers(init.headers).get('Authorization'), 'Bearer test-token');
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo', plan: { name: 'pro' } });
+      if (path.startsWith('/user/orgs')) return Response.json([{ login: 'acme' }, { login: 'other' }]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path === '/orgs/other') return Response.json({});
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        assert.match(path, /year=2026&month=10$/);
+        return Response.json(summary);
+      }
+      if (path === '/organizations/acme/settings/billing/budgets') return Response.json(budgets);
+      if (path.startsWith('/users/octo/settings/billing/usage/summary')) {
+        return Response.json({ usageItems: [] });
+      }
+      return new Response('{}', { status: 403 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.ok(usage);
+    assert.equal(usage.viewer, 'octo');
+    assert.deepEqual(
+      usage.accounts.map((account) => account.login),
+      ['acme', 'octo'],
+    );
+    assert.deepEqual(
+      usage.windows.map((row) => row.id),
+      ['acme:actions-minutes', 'acme:budget:actions', 'acme:budget:ai_credits', 'octo:actions-minutes'],
+    );
+    assert.ok(!requests.some((url) => url.includes('/users/octo/settings/billing/budgets')));
+  });
+
+  it('signs out when GitHub rejects the stored token', async () => {
+    mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 401 }));
+    assert.equal(await GithubService.fetchUsage(NOW), null);
+    assert.equal(store.github_token, undefined);
+  });
+
+  it('returns nothing without a token', async () => {
+    delete store.github_token;
+    const fetchMock = mock.method(globalThis, 'fetch', async () => Response.json({}));
+    assert.equal(await GithubService.fetchUsage(NOW), null);
+    assert.equal(fetchMock.mock.callCount(), 0);
+  });
+
+  it('stores the device code, then the token once GitHub approves it', async () => {
+    delete store.github_token;
+    mock.timers.enable({ apis: ['setTimeout'] });
+    const tokenResponses = [
+      { error: 'authorization_pending' },
+      { access_token: 'granted-token', token_type: 'bearer' },
+    ];
+    mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+      const body = new URLSearchParams(String(init.body));
+      if (url === 'https://github.com/login/device/code') {
+        assert.ok(body.get('client_id'));
+        assert.equal(body.get('scope'), 'read:org user');
+        return Response.json({
+          device_code: 'device-123',
+          user_code: 'ABCD-1234',
+          verification_uri: 'https://github.com/login/device',
+          expires_in: 900,
+          interval: 5,
+        });
+      }
+      assert.equal(url, 'https://github.com/login/oauth/access_token');
+      assert.equal(body.get('device_code'), 'device-123');
+      return Response.json(tokenResponses.shift());
+    });
+
+    let signedIn = false;
+    const flow = await GithubService.startSignIn(() => {
+      signedIn = true;
+    });
+    assert.equal(flow.userCode, 'ABCD-1234');
+    assert.deepEqual((store.github_device_flow as { userCode: string }).userCode, 'ABCD-1234');
+
+    for (let round = 0; round < 2 && !signedIn; round += 1) {
+      mock.timers.tick(5000);
+      for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
+    }
+
+    assert.equal(signedIn, true);
+    assert.equal(store.github_token, 'granted-token');
+    assert.equal(store.github_device_flow, undefined);
+  });
+
+  it('records why a device sign-in ended without a token', async () => {
+    delete store.github_token;
+    mock.timers.enable({ apis: ['setTimeout'] });
+    mock.method(globalThis, 'fetch', async (url: string) =>
+      url.endsWith('/device/code')
+        ? Response.json({
+            device_code: 'd',
+            user_code: 'WXYZ-0000',
+            verification_uri: 'https://github.com/login/device',
+            expires_in: 900,
+            interval: 5,
+          })
+        : Response.json({ error: 'access_denied' }),
+    );
+
+    await GithubService.startSignIn(() => assert.fail('should not sign in'));
+    mock.timers.tick(5000);
+    for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal((store.github_device_flow as { error?: string }).error, 'access_denied');
+    assert.equal(store.github_token, undefined);
+  });
+});

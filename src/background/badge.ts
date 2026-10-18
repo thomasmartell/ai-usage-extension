@@ -44,7 +44,11 @@ const iconRange = (percent: number): number => {
   return Math.max(10, Math.floor(clamped / 10) * 10);
 };
 
-const PROVIDER_TITLE: Record<ProviderId, string> = { claude: 'Claude', codex: 'Codex' };
+const PROVIDER_TITLE: Record<ProviderId, string> = {
+  claude: 'Claude',
+  codex: 'Codex',
+  github: 'GitHub',
+};
 
 interface UsageSummary {
   percent: number;
@@ -54,7 +58,7 @@ interface UsageSummary {
 const summarizeUsage = (state: UsageState): UsageSummary | null => {
   const rows: Array<{ provider: ProviderId; label: string; percent: number }> = [];
 
-  (['claude', 'codex'] as const).forEach((provider) => {
+  (['claude', 'codex', 'github'] as const).forEach((provider) => {
     const usage = state[provider];
     if (!usage) return;
     const highest = highestUsageWindow(usage);

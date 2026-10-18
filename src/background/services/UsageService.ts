@@ -10,6 +10,7 @@ import {
   UsageState,
 } from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
+import { GithubService } from './GithubService';
 
 const ENDPOINTS = {
   claudeOrgs: 'https://claude.ai/api/organizations',
@@ -467,6 +468,9 @@ const historySamples = (state: UsageState): Array<[string, number]> => {
       samples.push([`codex:${model.id}`, model.limit.percentage]);
     }
   }
+  for (const window of state.github?.windows ?? []) {
+    samples.push([`github:${window.id}`, window.limit.percentage]);
+  }
   return samples;
 };
 
@@ -483,14 +487,20 @@ export class UsageService {
   }
 
   static async refreshAllUsage(): Promise<UsageState> {
-    const [claude, codex] = await Promise.all([
+    const [claude, codex, github] = await Promise.all([
       this.fetchClaudeUsage().catch(() => null),
       this.fetchCodexUsage().catch(() => null),
+      GithubService.fetchUsage().catch(() => null),
     ]);
 
     const next = await this.getUsageState();
     if (claude) next.claude = claude;
     if (codex) next.codex = codex;
+    if (github) {
+      next.github = github;
+    } else if (!(await GithubService.isSignedIn())) {
+      delete next.github;
+    }
 
     await this.saveUsageState(next);
     try {

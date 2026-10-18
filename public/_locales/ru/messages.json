@@ -142,5 +142,44 @@
   },
   "timeMinuteShort": {
     "message": "м"
+  },
+  "emptyGithub": {
+    "message": "Войдите, чтобы видеть минуты Actions и расходы бюджета для вашего аккаунта и организаций."
+  },
+  "githubActionsMinutes": {
+    "message": "$1 · Минуты Actions"
+  },
+  "githubBudget": {
+    "message": "$1 · Бюджет $2"
+  },
+  "githubSignIn": {
+    "message": "Войти через GitHub"
+  },
+  "githubSignOut": {
+    "message": "Выйти"
+  },
+  "githubCancel": {
+    "message": "Отмена"
+  },
+  "githubEnterCode": {
+    "message": "Введите этот код на GitHub:"
+  },
+  "githubOpenAndCopy": {
+    "message": "Скопировать код и открыть GitHub"
+  },
+  "githubWaiting": {
+    "message": "Ожидание подтверждения…"
+  },
+  "githubSignInFailed": {
+    "message": "Вход не завершён ($1). Попробуйте ещё раз."
+  },
+  "githubSignedInAs": {
+    "message": "Вы вошли как $1"
+  },
+  "githubNoBilling": {
+    "message": "Этот аккаунт не может читать данные о расходах."
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 мин"
   }
 }

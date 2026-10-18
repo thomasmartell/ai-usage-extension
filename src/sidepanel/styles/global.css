@@ -512,6 +512,65 @@ input {
   line-height: 1.5;
 }
 
+/* ---- GitHub sign-in ------------------------------------------------- */
+
+.au-btn {
+  align-self: flex-start;
+  border: 1px solid var(--au-line-strong);
+  background: transparent;
+  color: var(--au-text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.au-btn:hover:not(:disabled) {
+  background: var(--au-surface-hover);
+}
+
+.au-btn:disabled {
+  cursor: default;
+  color: var(--au-text-faint);
+}
+
+.au-link-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--au-text-muted);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.au-link-btn:hover {
+  color: var(--au-text);
+}
+
+.au-github__pending {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.au-github__code {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 18px;
+  letter-spacing: 0.12em;
+  color: var(--au-text);
+}
+
+.au-github__account {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 /* ---- Footer --------------------------------------------------------- */
 
 .au-footer {

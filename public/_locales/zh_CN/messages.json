@@ -142,5 +142,44 @@
   },
   "timeMinuteShort": {
     "message": "分钟"
+  },
+  "emptyGithub": {
+    "message": "登录后可查看你的账户和组织的 Actions 分钟数及预算支出。"
+  },
+  "githubActionsMinutes": {
+    "message": "$1 · Actions 分钟数"
+  },
+  "githubBudget": {
+    "message": "$1 · $2 预算"
+  },
+  "githubSignIn": {
+    "message": "使用 GitHub 登录"
+  },
+  "githubSignOut": {
+    "message": "退出登录"
+  },
+  "githubCancel": {
+    "message": "取消"
+  },
+  "githubEnterCode": {
+    "message": "请在 GitHub 上输入此代码："
+  },
+  "githubOpenAndCopy": {
+    "message": "复制代码并打开 GitHub"
+  },
+  "githubWaiting": {
+    "message": "正在等待批准…"
+  },
+  "githubSignInFailed": {
+    "message": "登录未完成（$1）。请重试。"
+  },
+  "githubSignedInAs": {
+    "message": "已登录为 $1"
+  },
+  "githubNoBilling": {
+    "message": "此账户无法读取任何账单数据。"
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 分钟"
   }
 }

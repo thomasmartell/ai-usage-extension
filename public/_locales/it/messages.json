@@ -142,5 +142,44 @@
   },
   "timeMinuteShort": {
     "message": "min"
+  },
+  "emptyGithub": {
+    "message": "Accedi per vedere i minuti di Actions e la spesa del budget per il tuo account e le tue organizzazioni."
+  },
+  "githubActionsMinutes": {
+    "message": "$1 · Minuti Actions"
+  },
+  "githubBudget": {
+    "message": "$1 · Budget $2"
+  },
+  "githubSignIn": {
+    "message": "Accedi con GitHub"
+  },
+  "githubSignOut": {
+    "message": "Esci"
+  },
+  "githubCancel": {
+    "message": "Annulla"
+  },
+  "githubEnterCode": {
+    "message": "Inserisci questo codice su GitHub:"
+  },
+  "githubOpenAndCopy": {
+    "message": "Copia il codice e apri GitHub"
+  },
+  "githubWaiting": {
+    "message": "In attesa di approvazione…"
+  },
+  "githubSignInFailed": {
+    "message": "Accesso non completato ($1). Riprova."
+  },
+  "githubSignedInAs": {
+    "message": "Accesso eseguito come $1"
+  },
+  "githubNoBilling": {
+    "message": "Questo account non può leggere i dati di fatturazione."
+  },
+  "unitMinutes": {
+    "message": "$1 / $2 min"
   }
 }
