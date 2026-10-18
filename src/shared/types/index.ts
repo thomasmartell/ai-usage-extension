@@ -104,6 +104,8 @@ export interface NetlifyUsage {
   creditsMissing?: string[];
   /** The team listing itself failed; nothing in this snapshot is current. */
   listingFailed?: boolean;
+  /** Slugs of teams whose credit reply had no plan-credit pool (legacy or garbled). */
+  creditsUnconfirmed?: string[];
   models: ModelUsage[];
   status: UsageStatus;
   lastUpdated: number;

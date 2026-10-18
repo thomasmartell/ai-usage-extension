@@ -269,6 +269,31 @@ describe('Netlify usage request', () => {
     assert.deepEqual(usage?.unreadable, [{ name: 'Netlify', status: 0 }]);
   });
 
+  it('keeps a credit team’s rows over legacy meters from a reply without credits', async () => {
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      if (url.endsWith('/accounts')) return Response.json([account]);
+      if (url.endsWith('/billing/credits')) return Response.json({ unexpected: true });
+      return Response.json(buildStatus);
+    });
+    const now = Date.UTC(2026, 9, 18);
+    const usage = await NetlifyService.fetchUsage(now);
+    assert.deepEqual(usage?.creditsUnconfirmed, ['acme']);
+
+    // A team that had credit rows keeps them in place of the legacy meters.
+    const [team] = parseAccounts([account]);
+    const previous = { ...usage!, windows: buildAccountRows(team, creditStatus, true, credits) };
+    assert.deepEqual(
+      carryCredits(usage!, previous).windows.map((row) => row.id),
+      ['acme:plan-credits', 'acme:addon-credits'],
+    );
+    // A team that never had credits (a legacy plan) keeps its minute meter.
+    assert.ok(
+      carryCredits(usage!, { ...previous, windows: [] }).windows.some(
+        (row) => row.id === 'acme:build-minutes',
+      ),
+    );
+  });
+
   it('forgets a token Netlify rejects', async () => {
     mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 401 }));
     assert.equal(await NetlifyService.fetchUsage(), null);

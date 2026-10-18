@@ -205,15 +205,24 @@ export const carryCredits = (next: NetlifyUsage, previous?: NetlifyUsage): Netli
   if (next.listingFailed && previous && !previous.listingFailed) {
     return { ...previous, unreadable: next.unreadable };
   }
-  if (!next.creditsMissing?.length || !previous) return next;
+  const slugs = new Set([...(next.creditsMissing ?? []), ...(next.creditsUnconfirmed ?? [])]);
+  if (slugs.size === 0 || !previous) return next;
   // Matched on the team slug that prefixes each row id: names need not be unique.
+  const slugOf = (row: ModelUsage) => row.id.slice(0, row.id.lastIndexOf(':'));
   const kept = previous.windows.filter(
     (row) =>
-      next.creditsMissing!.includes(row.id.slice(0, row.id.lastIndexOf(':'))) &&
+      slugs.has(slugOf(row)) &&
       row.limit.unit === 'credits' &&
       (row.limit.resetsAt === null || Date.parse(row.limit.resetsAt) > next.lastUpdated),
   );
-  return kept.length > 0 ? { ...next, windows: [...next.windows, ...kept] } : next;
+  if (kept.length === 0) return next;
+  // A team that had credit rows keeps them in place of whatever this refresh
+  // built for it (nothing, or legacy meters from a reply without credits).
+  const replaced = new Set(kept.map(slugOf));
+  return {
+    ...next,
+    windows: [...next.windows.filter((row) => !replaced.has(slugOf(row))), ...kept],
+  };
 };
 
 /* -------------------- HTTP -------------------- */
@@ -289,16 +298,26 @@ export class NetlifyService {
 
     const unreadable: NonNullable<NetlifyUsage['unreadable']> = [];
     const creditsMissing: string[] = [];
+    const creditsUnconfirmed: string[] = [];
     const windows = accounts.flatMap((account, index) => {
       const [status, credits] = details[index];
       // A failed credit lookup is not a legacy plan: showing leftover minute
       // allowances instead would mislead, so the last credit rows are kept
       // (see `carryCredits`). A 404 means the team has no credit balance.
-      if (!credits || (!credits.ok && credits.status !== 404)) {
-        unreadable.push({ name: account.name, status: credits?.status ?? 0 });
+      if (
+        !credits ||
+        (!credits.ok && credits.status !== 404) ||
+        (credits.ok && !isObject(credits.data))
+      ) {
+        unreadable.push({ name: account.name, status: credits?.ok ? 0 : (credits?.status ?? 0) });
         creditsMissing.push(account.slug);
         return [];
       }
+      // A reply without a plan-credit pool reads as a legacy plan, but a
+      // credit team's garbled reply looks the same: `carryCredits` keeps the
+      // team's last credit rows if it had any.
+      if (credits.ok && !creditPool(credits.data, 'plan_credits'))
+        creditsUnconfirmed.push(account.slug);
       // Always under a team heading, which also carries the cycle's reset date.
       const rows = buildAccountRows(
         account,
@@ -321,6 +340,7 @@ export class NetlifyService {
       models: [],
       ...(unreadable.length > 0 ? { unreadable } : {}),
       ...(creditsMissing.length > 0 ? { creditsMissing } : {}),
+      ...(creditsUnconfirmed.length > 0 ? { creditsUnconfirmed } : {}),
       status: getUsageTone(highest),
       lastUpdated: now,
     };
