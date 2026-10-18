@@ -11,12 +11,16 @@ const DEVICE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
 /**
  * Actions minutes included each month, by plan name. GitHub's billing API
  * reports what was used but not the allowance, so it is looked up here.
+ * The REST API names Enterprise Cloud `business_plus`, or `business` on
+ * older organizations.
  */
 export const ACTIONS_INCLUDED_MINUTES: Record<string, number> = {
   free: 2_000,
   pro: 3_000,
   team: 3_000,
   enterprise: 50_000,
+  business: 50_000,
+  business_plus: 50_000,
 };
 
 /**

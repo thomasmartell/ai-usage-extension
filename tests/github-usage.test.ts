@@ -153,6 +153,16 @@ describe('GitHub billing rows', () => {
     assert.equal(rows[1].limit.percentage, 10);
   });
 
+  it('gives Enterprise Cloud plan identifiers the Enterprise allowance', () => {
+    for (const plan of ['business_plus', 'business']) {
+      const [minutes] = buildAccountRows(
+        { account: { ...org, plan }, items: parseBillingItems(summary), budgets: [] },
+        NOW,
+      );
+      assert.equal(minutes.limit.limit, 50000, plan);
+    }
+  });
+
   it('omits the minutes row when the plan allowance is unknown', () => {
     const rows = buildAccountRows(
       { account: { ...org, plan: null }, items: parseBillingItems(summary), budgets: [] },
