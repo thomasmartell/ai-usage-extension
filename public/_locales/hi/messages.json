@@ -196,5 +196,29 @@
   },
   "githubCreateToken": {
     "message": "GitHub पर बनाएँ"
+  },
+  "headlineWatch": {
+    "message": "$1 $2% पर है"
+  },
+  "headlineClear": {
+    "message": "सभी सीमाएँ आराम से हैं"
+  },
+  "headlineHighest": {
+    "message": "सबसे ऊँचा $1, $2% पर"
+  },
+  "headlineHit": {
+    "message": "$1 की सीमा पूरी हुई"
+  },
+  "weeklyShort": {
+    "message": "साप्ताहिक"
+  },
+  "monthShort": {
+    "message": "इस महीने"
+  },
+  "resetsHeading": {
+    "message": "उपलब्ध रीसेट · $1"
+  },
+  "expiresLabel": {
+    "message": "$1 को समाप्त"
   }
 }

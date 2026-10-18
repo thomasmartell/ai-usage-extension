@@ -113,6 +113,8 @@ export const formatCount = ({ used = 0, limit = 0, unit }: UsageLimit): string =
       style: 'currency',
       currency: 'USD',
       currencyDisplay: 'narrowSymbol',
+      // Whole budgets read as `$50`; spend keeps its cents.
+      minimumFractionDigits: Number.isInteger(used) && Number.isInteger(limit) ? 0 : 2,
     });
     return `${usd.format(used)} / ${usd.format(limit)}`;
   }

@@ -36,10 +36,10 @@ describe('ProviderCard resets', () => {
       lastUpdated: NOW,
     });
 
+    assert.match(html, /Resets available · 2/);
     // Day/month order follows the runtime locale, so accept either.
-    assert.match(html, /Full reset · expires (29 Oct|Oct 29)/);
-    assert.match(html, /Full reset · expires unknown/);
-    assert.doesNotMatch(html, /Available resets/);
+    assert.match(html, /<span>Full reset<\/span><span>expires (29 Oct|Oct 29)<\/span>/);
+    assert.match(html, /<span>Full reset<\/span><span>expires unknown<\/span>/);
   });
 
   it('falls back to the bare count for snapshots that predate reset details', () => {
@@ -51,7 +51,7 @@ describe('ProviderCard resets', () => {
       lastUpdated: NOW,
     });
 
-    assert.match(html, /Available resets · 2/);
+    assert.match(html, /Resets available · 2/);
   });
 
   it('shows no count when fresh reset details say there are none', () => {
@@ -64,7 +64,7 @@ describe('ProviderCard resets', () => {
       lastUpdated: NOW,
     });
 
-    assert.doesNotMatch(html, /Available resets/);
+    assert.doesNotMatch(html, /Resets available/);
   });
 
   it('shows Claude resets alongside the usage rows', () => {
@@ -78,6 +78,25 @@ describe('ProviderCard resets', () => {
       lastUpdated: NOW,
     });
 
-    assert.match(html, /Full reset · expires (22 Oct|Oct 22)/);
+    assert.match(html, /<span>Full reset<\/span><span>expires (22 Oct|Oct 22)<\/span>/);
+  });
+});
+
+describe('ProviderCard layout', () => {
+  it('leads with the weekly limit, lists it before the session, and leaves out the plan', () => {
+    const html = render({
+      plan: 'Max',
+      session: { ...limit, percentage: 33 },
+      weekly: { ...limit, percentage: 91 },
+      models: [],
+      resets: [],
+      status: 'warning',
+      lastUpdated: NOW,
+    });
+
+    assert.match(html, /au-card__peak--warning"><span>91<small>%<\/small><\/span>/);
+    assert.match(html, /weekly<\/span>/);
+    assert.ok(html.indexOf('Weekly · 7d') < html.indexOf('Session · 5h'));
+    assert.doesNotMatch(html, /Plan · Max/);
   });
 });

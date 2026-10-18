@@ -196,5 +196,29 @@
   },
   "githubCreateToken": {
     "message": "在 GitHub 上创建"
+  },
+  "headlineWatch": {
+    "message": "$1 已达 $2%"
+  },
+  "headlineClear": {
+    "message": "所有限额都很充裕"
+  },
+  "headlineHighest": {
+    "message": "最高为 $1，$2%"
+  },
+  "headlineHit": {
+    "message": "$1 已达上限"
+  },
+  "weeklyShort": {
+    "message": "每周"
+  },
+  "monthShort": {
+    "message": "本月"
+  },
+  "resetsHeading": {
+    "message": "可用重置 · $1"
+  },
+  "expiresLabel": {
+    "message": "$1 到期"
   }
 }

@@ -29,6 +29,9 @@
   /* Pace tick marking how much of the window has elapsed */
   --au-tick: rgba(255, 255, 255, 0.85);
 
+  /* Figures — tabular, instrument-like */
+  --au-mono: 'SF Mono', ui-monospace, 'JetBrains Mono', Menlo, monospace;
+
   font-family: 'Sohne', 'Avenir Next', 'IBM Plex Sans', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -38,7 +41,6 @@ body,
 #root {
   margin: 0;
   width: 780px;
-  min-height: 420px;
   background: var(--au-bg);
   color: var(--au-text);
 }
@@ -63,34 +65,48 @@ input {
 }
 
 .au-shell {
-  padding: 12px;
+  background: radial-gradient(90% 70% at 0% 0%, rgba(235, 233, 228, 0.045), transparent 70%);
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 /* ---- Top bar -------------------------------------------------------- */
 
 .au-topbar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  padding: 2px 2px 0;
 }
 
-.au-eyebrow {
-  margin: 0 0 3px;
-  color: var(--au-text-faint);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+.au-headline {
+  min-width: 0;
 }
 
-.au-title {
+.au-headline__title {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  color: var(--au-text);
+}
+
+.au-headline__title--warning {
+  color: var(--au-fill-warning);
+}
+
+.au-headline__title--critical {
+  color: var(--au-fill-critical);
+}
+
+.au-headline__meta {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: var(--au-text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .au-btn-refresh {
@@ -161,6 +177,9 @@ input {
 }
 
 .au-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
   margin: 2px 0 -4px;
   color: var(--au-text-faint);
   font-size: 10px;
@@ -175,15 +194,122 @@ input {
 .au-card {
   border: 1px solid var(--au-line);
   border-radius: 12px;
-  background: var(--au-surface);
-  padding: 11px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 48px), var(--au-surface);
+  padding: 12px;
+  animation: au-rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.au-card:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.au-card:nth-child(3) {
+  animation-delay: 100ms;
+}
+
+@keyframes au-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .au-card {
+    animation: none;
+  }
+}
+
+.au-card__peak {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: var(--au-mono);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--au-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.au-card__peak small {
+  margin-left: 1px;
+  font-size: 11px;
+  color: var(--au-text-muted);
+}
+
+.au-card__peak-caption {
+  font-family: inherit;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--au-text-faint);
+}
+
+.au-card__peak--warning {
+  color: var(--au-fill-warning);
+}
+
+.au-card__peak--critical {
+  color: var(--au-fill-critical);
+}
+
+.au-divider {
+  margin: 0;
+  border: 0;
+  border-top: 1px dashed var(--au-line-strong);
+  opacity: 0.6;
+}
+
+.au-resets {
+  border: 1px solid rgba(143, 168, 126, 0.28);
+  border-radius: 9px;
+  background: rgba(143, 168, 126, 0.06);
+  padding: 7px 9px;
+}
+
+.au-resets__title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--au-fill-ahead);
+}
+
+.au-resets__list {
+  margin: 5px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.au-resets__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--au-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.au-resets__list li span:last-child {
+  color: var(--au-text-muted);
 }
 
 .au-card__header {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-bottom: 9px;
+  min-height: 24px;
+  margin-bottom: 12px;
 }
 
 .au-card__heading {
@@ -215,14 +341,6 @@ input {
 }
 
 .au-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* ---- Model breakdown -------------------------------------------------- */
-
-.au-breakdown {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -475,18 +593,6 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-}
-
-/* ---- Footer --------------------------------------------------------- */
-
-.au-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 2px 0 0;
-  color: var(--au-text-faint);
-  font-size: 11px;
 }
 
 .au-footer__link {

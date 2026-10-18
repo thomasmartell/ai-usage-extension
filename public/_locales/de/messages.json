@@ -196,5 +196,29 @@
   },
   "githubCreateToken": {
     "message": "Auf GitHub erstellen"
+  },
+  "headlineWatch": {
+    "message": "$1 liegt bei $2 %"
+  },
+  "headlineClear": {
+    "message": "Alle Limits im grünen Bereich"
+  },
+  "headlineHighest": {
+    "message": "höchster Wert: $1 mit $2 %"
+  },
+  "headlineHit": {
+    "message": "$1: Limit erreicht"
+  },
+  "weeklyShort": {
+    "message": "Woche"
+  },
+  "monthShort": {
+    "message": "diesen Monat"
+  },
+  "resetsHeading": {
+    "message": "Verfügbare Resets · $1"
+  },
+  "expiresLabel": {
+    "message": "läuft ab $1"
   }
 }

@@ -89,7 +89,7 @@ export const getUsageWindows = (usage: ProviderUsage): ModelUsage[] => {
 };
 
 /** Split "GPT 5.3 Codex Spark · 5h" into its base label and window tag. */
-const splitLabel = (label: string): { base: string; tag: string | null } => {
+export const splitLabel = (label: string): { base: string; tag: string | null } => {
   const at = label.lastIndexOf(' · ');
   if (at === -1) return { base: label, tag: null };
   return { base: label.slice(0, at), tag: label.slice(at + 3) };
@@ -151,4 +151,15 @@ export const highestUsageWindow = (usage: ProviderUsage): ModelUsage | null => {
   return windows.reduce((highest, current) =>
     current.limit.percentage > highest.limit.percentage ? current : highest,
   );
+};
+
+/**
+ * The fullest limit a provider reports, model rows included (a model can
+ * run hotter than the provider's own windows).
+ */
+export const peakUsage = (usage: ProviderUsage): ModelUsage | null => {
+  const rows = [...getUsageWindows(usage), ...usage.models];
+  if (rows.length === 0) return null;
+
+  return rows.reduce((peak, row) => (row.limit.percentage > peak.limit.percentage ? row : peak));
 };

@@ -4,6 +4,7 @@ import githubBrandAsset from '../assets/brands/github.svg';
 import { msg } from '../shared/i18n';
 import { useNow } from '../shared/hooks/useNow';
 import { GithubConnect } from './components/GithubConnect';
+import { Headline } from './components/Headline';
 import { ProviderCard } from './components/ProviderCard';
 import { useGithubAuth } from './hooks/useGithubAuth';
 import { useUsageData } from './hooks/useUsageData';
@@ -19,9 +20,7 @@ export const App = () => {
   return (
     <main className="au-shell">
       <header className="au-topbar">
-        <div>
-          <h2 className="au-title">{msg('popupTitle')}</h2>
-        </div>
+        <Headline usage={usage} now={now} />
         <button
           type="button"
           onClick={() => void refresh()}
@@ -81,19 +80,6 @@ export const App = () => {
           footer={<GithubConnect auth={githubAuth} usage={usage.github} now={now} />}
         />
       </div>
-
-      <footer className="au-footer">
-        <a
-          className="au-footer__link"
-          href="https://github.com/cupcakedev/ai-usage-extension"
-          target="_blank"
-          rel="noreferrer"
-        >
-          {msg('sourceCode')}
-        </a>
-        <span aria-hidden="true">·</span>
-        <span>{msg('github')}</span>
-      </footer>
     </main>
   );
 };

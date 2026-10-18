@@ -196,5 +196,29 @@
   },
   "githubCreateToken": {
     "message": "GitHub で作成"
+  },
+  "headlineWatch": {
+    "message": "$1 は $2% です"
+  },
+  "headlineClear": {
+    "message": "すべての上限に余裕があります"
+  },
+  "headlineHighest": {
+    "message": "最大は $1 の $2%"
+  },
+  "headlineHit": {
+    "message": "$1 の上限に達しました"
+  },
+  "weeklyShort": {
+    "message": "週間"
+  },
+  "monthShort": {
+    "message": "今月"
+  },
+  "resetsHeading": {
+    "message": "利用可能なリセット · $1"
+  },
+  "expiresLabel": {
+    "message": "$1 に失効"
   }
 }

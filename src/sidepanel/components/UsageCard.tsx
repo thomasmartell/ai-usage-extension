@@ -5,6 +5,8 @@ interface UsageCardProps {
   subtitle?: string;
   iconSrc?: string;
   iconAlt?: string;
+  /** Content pinned to the right of the header, e.g. the card's peak usage. */
+  aside?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -14,6 +16,7 @@ export const UsageCard: React.FC<UsageCardProps> = ({
   subtitle,
   iconSrc,
   iconAlt,
+  aside,
   children,
 }) => {
   return (
@@ -24,6 +27,7 @@ export const UsageCard: React.FC<UsageCardProps> = ({
           <h2 className="au-card__title">{title}</h2>
           {subtitle && <p className="au-card__subtitle">{subtitle}</p>}
         </div>
+        {aside}
       </header>
       <div className="au-card__body">{children}</div>
     </section>

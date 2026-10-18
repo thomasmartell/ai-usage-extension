@@ -1,15 +1,23 @@
 import React from 'react';
+import { WINDOW_MS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
-import { formatExpiryDate, formatRelativeTime } from '../../shared/utils';
+import {
+  clampPercent,
+  formatExpiryDate,
+  formatRelativeTime,
+  getUsageTone,
+} from '../../shared/utils';
 import {
   getUsageWindows,
   groupQuietModels,
-  sortByWindow,
+  peakUsage,
   withInferredWindow,
   type ProviderUsage,
 } from '../../shared/usageWindows';
 import { UsageCard } from './UsageCard';
 import { UsageMetric } from './UsageMetric';
+
+const STALE_AFTER_MS = 15 * 60 * 1000;
 
 interface ProviderCardProps {
   title: string;
@@ -32,12 +40,71 @@ const Skeleton: React.FC = () => (
   </div>
 );
 
-/** Every limit the card shows: provider windows shortest first (5h, then
- *  weekly), followed by the model breakdown rows (e.g. Fable). */
-const cardRows = (usage: ProviderUsage) => [
-  ...sortByWindow(getUsageWindows(usage)),
-  ...groupQuietModels(usage.models.map(withInferredWindow)),
-];
+/** Provider windows longest first (weekly before the 5h session, since the
+ *  weekly limits matter most; rows with no window, like budgets, last), then
+ *  the model breakdown rows (e.g. Fable) beneath a divider. */
+const cardRows = (usage: ProviderUsage) => ({
+  windows: [...getUsageWindows(usage)].sort(
+    (a, b) => (b.limit.windowMs ?? -1) - (a.limit.windowMs ?? -1),
+  ),
+  models: groupQuietModels(usage.models.map(withInferredWindow)),
+});
+
+/**
+ * The figure a card leads with: its weekly limit when it has one, otherwise
+ * its fullest row (GitHub's are monthly).
+ */
+const leadFigure = (usage: ProviderUsage): { percent: number; caption: string } | null => {
+  const weekly = getUsageWindows(usage).find(
+    (window) => window.limit.windowMs === WINDOW_MS.sevenDays,
+  );
+  if (weekly)
+    return { percent: clampPercent(weekly.limit.percentage), caption: msg('weeklyShort') };
+
+  const peak = peakUsage(usage);
+  if (!peak) return null;
+  return {
+    percent: clampPercent(peak.limit.percentage),
+    caption: 'accounts' in usage ? msg('monthShort') : '',
+  };
+};
+
+/** Reset credits the provider has granted, soonest-expiring first. */
+const ResetList: React.FC<{ usage: ProviderUsage }> = ({ usage }) => {
+  const resets = 'resets' in usage ? usage.resets : undefined;
+  const legacyCount =
+    resets === undefined && 'availableResets' in usage ? (usage.availableResets ?? 0) : 0;
+
+  if (resets?.length) {
+    const ordered = [...resets].sort(
+      (a, b) =>
+        new Date(a.expiresAt ?? Infinity).getTime() - new Date(b.expiresAt ?? Infinity).getTime(),
+    );
+    return (
+      <div className="au-resets">
+        <p className="au-resets__title">{msg('resetsHeading', String(resets.length))}</p>
+        <ul className="au-resets__list">
+          {ordered.map((reset) => (
+            <li key={reset.id}>
+              <span>{reset.label}</span>
+              <span>{msg('expiresLabel', formatExpiryDate(reset.expiresAt))}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  if (legacyCount > 0) {
+    return (
+      <div className="au-resets">
+        <p className="au-resets__title">{msg('resetsHeading', String(legacyCount))}</p>
+      </div>
+    );
+  }
+
+  return null;
+};
 
 /** Renders one provider's usage, handling loading / empty / data states. */
 export const ProviderCard: React.FC<ProviderCardProps> = ({
@@ -50,50 +117,66 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   emptyHint,
   footer,
 }) => {
+  // The header already says when data was fetched; a card only repeats it
+  // when its own snapshot has fallen behind.
   const subtitle = loading
     ? msg('loadingSnapshot')
-    : usage
-      ? msg('updated', formatRelativeTime(usage.lastUpdated, now))
-      : msg('notConnected');
+    : !usage
+      ? msg('notConnected')
+      : now - usage.lastUpdated > STALE_AFTER_MS
+        ? msg('updated', formatRelativeTime(usage.lastUpdated, now))
+        : undefined;
 
-  const rows = usage && !loading ? cardRows(usage) : [];
-  const resets = usage && 'resets' in usage ? usage.resets : undefined;
+  const { windows, models } = usage && !loading ? cardRows(usage) : { windows: [], models: [] };
+  const lead = usage && !loading ? leadFigure(usage) : null;
+
+  const renderRows = (rows: typeof windows) =>
+    rows.map((row, index) => (
+      <React.Fragment key={row.id}>
+        {row.group && row.group !== rows[index - 1]?.group && (
+          <p className="au-group">
+            <span>{row.group}</span>
+            {row.limit.resetsAt && (
+              <span>{msg('nextResetLabel', formatExpiryDate(row.limit.resetsAt))}</span>
+            )}
+          </p>
+        )}
+        <UsageMetric
+          label={row.label}
+          limit={row.limit}
+          secondaryResetsAt={row.secondaryResetsAt}
+          showReset={!row.group}
+          now={now}
+        />
+      </React.Fragment>
+    ));
 
   return (
-    <UsageCard title={title} subtitle={subtitle} iconSrc={iconSrc} iconAlt={iconAlt}>
+    <UsageCard
+      title={title}
+      subtitle={subtitle}
+      iconSrc={iconSrc}
+      iconAlt={iconAlt}
+      aside={
+        lead && (
+          <span className={`au-card__peak au-card__peak--${getUsageTone(lead.percent)}`}>
+            <span>
+              {lead.percent}
+              <small>%</small>
+            </span>
+            {lead.caption && <span className="au-card__peak-caption">{lead.caption}</span>}
+          </span>
+        )
+      }
+    >
       {loading ? (
         <Skeleton />
       ) : usage ? (
         <>
-          {rows.map((row, index) => (
-            <React.Fragment key={row.id}>
-              {row.group && row.group !== rows[index - 1]?.group && (
-                <p className="au-group">{row.group}</p>
-              )}
-              <UsageMetric
-                label={row.label}
-                limit={row.limit}
-                secondaryResetsAt={row.secondaryResetsAt}
-                now={now}
-              />
-            </React.Fragment>
-          ))}
-          {'plan' in usage && usage.plan !== 'unknown' && (
-            <p className="au-footnote">{msg('planLabel', usage.plan)}</p>
-          )}
-          {resets?.map((reset) => (
-            <p key={reset.id} className="au-footnote">
-              {msg('resetExpiresLabel', [reset.label, formatExpiryDate(reset.expiresAt)])}
-            </p>
-          ))}
-          {resets === undefined &&
-            'availableResets' in usage &&
-            usage.availableResets !== null &&
-            usage.availableResets > 0 && (
-              <p className="au-footnote">
-                {msg('availableResetsLabel', String(usage.availableResets))}
-              </p>
-            )}
+          {renderRows(windows)}
+          {models.length > 0 && windows.length > 0 && <hr className="au-divider" />}
+          {renderRows(models)}
+          <ResetList usage={usage} />
         </>
       ) : (
         <p className="au-empty">{emptyHint}</p>

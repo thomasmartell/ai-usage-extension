@@ -196,5 +196,29 @@
   },
   "githubCreateToken": {
     "message": "Создать на GitHub"
+  },
+  "headlineWatch": {
+    "message": "$1: $2%"
+  },
+  "headlineClear": {
+    "message": "Все лимиты в норме"
+  },
+  "headlineHighest": {
+    "message": "максимум: $1 — $2%"
+  },
+  "headlineHit": {
+    "message": "$1: лимит исчерпан"
+  },
+  "weeklyShort": {
+    "message": "неделя"
+  },
+  "monthShort": {
+    "message": "этот месяц"
+  },
+  "resetsHeading": {
+    "message": "Доступные сбросы · $1"
+  },
+  "expiresLabel": {
+    "message": "истекает $1"
   }
 }

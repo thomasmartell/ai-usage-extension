@@ -196,5 +196,29 @@
   },
   "githubCreateToken": {
     "message": "Create one on GitHub"
+  },
+  "headlineWatch": {
+    "message": "$1 limit at $2%"
+  },
+  "headlineClear": {
+    "message": "All limits comfortable"
+  },
+  "headlineHighest": {
+    "message": "highest is $1 at $2%"
+  },
+  "headlineHit": {
+    "message": "$1 limit reached"
+  },
+  "weeklyShort": {
+    "message": "weekly"
+  },
+  "monthShort": {
+    "message": "this month"
+  },
+  "resetsHeading": {
+    "message": "Resets available · $1"
+  },
+  "expiresLabel": {
+    "message": "expires $1"
   }
 }

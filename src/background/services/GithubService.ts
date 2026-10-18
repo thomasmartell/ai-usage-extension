@@ -143,8 +143,10 @@ export const buildAccountRows = (
       id: `${account.login}:budget:${budget.sku}`,
       label: msg('githubBudget', BUDGET_PRODUCTS[budget.sku] ?? budget.sku),
       group: account.login,
+      // No window length: a budget is a spending cap, so pace against the
+      // month says nothing useful.
       limit: {
-        ...window,
+        resetsAt: window.resetsAt,
         percentage: clampPercent((spent / budget.amount) * 100),
         used: spent,
         limit: budget.amount,
