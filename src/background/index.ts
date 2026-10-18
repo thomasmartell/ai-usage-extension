@@ -1,6 +1,7 @@
 import { REFRESH_ALARM, REFRESH_INTERVAL_MINUTES } from '../shared/constants';
 import type { ExtensionMessage, MessageResponse, UsageState } from '../shared/types';
 import { updateBadge } from './badge';
+import { createRefresher } from './refreshQueue';
 import { GithubService } from './services/GithubService';
 import { NetlifyService } from './services/NetlifyService';
 import { UsageService } from './services/UsageService';
@@ -13,7 +14,6 @@ const LEGACY_OVERLAY_KEYS = [
 ];
 
 let hasStartedRefresh = false;
-let refreshInFlight: Promise<UsageState> | null = null;
 let badgeUpdateQueue: Promise<void> = Promise.resolve();
 
 const queueBadgeUpdate = (state: UsageState): Promise<void> => {
@@ -21,30 +21,15 @@ const queueBadgeUpdate = (state: UsageState): Promise<void> => {
   return badgeUpdateQueue;
 };
 
-/** A refresh that starts after any in-flight one, so it reads current tokens. */
-const refreshUsageAfterChange = (): Promise<UsageState> =>
-  (refreshInFlight ?? Promise.resolve())
-    .catch(() => undefined)
-    .then(() => refreshUsage({ force: true }));
-
 /** `force` fetches GitHub and Netlify even if their snapshot is still recent. */
-const refreshUsage = ({ force = false } = {}): Promise<UsageState> => {
-  if (refreshInFlight) {
-    return refreshInFlight;
-  }
-
-  hasStartedRefresh = true;
-  refreshInFlight = UsageService.refreshAllUsage({ force })
-    .then(async (state) => {
-      await queueBadgeUpdate(state);
-      return state;
-    })
-    .finally(() => {
-      refreshInFlight = null;
-    });
-
-  return refreshInFlight;
-};
+const { refresh: refreshUsage, refreshAfterChange: refreshUsageAfterChange } = createRefresher(
+  async ({ force }) => {
+    hasStartedRefresh = true;
+    const state = await UsageService.refreshAllUsage({ force });
+    await queueBadgeUpdate(state);
+    return state;
+  },
+);
 
 void UsageService.getUsageState()
   .then((state) => (hasStartedRefresh ? undefined : queueBadgeUpdate(state)))

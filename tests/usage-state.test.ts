@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, describe, it, mock } from 'node:test';
 import { GithubService } from '../src/background/services/GithubService';
 import { NetlifyService } from '../src/background/services/NetlifyService';
+import { createRefresher } from '../src/background/refreshQueue';
 import { UsageService } from '../src/background/services/UsageService';
 import type { UsageState } from '../src/shared/types';
 
@@ -73,5 +74,30 @@ describe('Usage state updates', () => {
     await UsageService.refreshAllUsage({ force: true });
     assert.equal(github.mock.callCount(), 1);
     assert.equal(netlify.mock.callCount(), 2);
+  });
+});
+
+describe('Refresh queue', () => {
+  it('shares a running refresh, but runs a forced one after a background one', async () => {
+    const runs: boolean[] = [];
+    let finish: () => void = () => undefined;
+    const { refresh } = createRefresher(({ force }) => {
+      runs.push(force);
+      return new Promise<UsageState>((resolve) => {
+        finish = () => resolve({});
+      });
+    });
+
+    const background = refresh();
+    assert.equal(refresh(), background);
+    const forced = refresh({ force: true });
+    finish();
+    await background;
+    // Let the queued forced run start, then finish it.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(runs, [false, true]);
+    assert.equal(refresh({ force: true }), refresh());
+    finish();
+    await forced;
   });
 });
