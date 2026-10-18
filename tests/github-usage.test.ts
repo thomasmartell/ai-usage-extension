@@ -631,6 +631,39 @@ describe('GitHub usage request', () => {
     assert.deepEqual(usage?.budgetsMissing, ['acme']);
   });
 
+  it('meters a budget by GitHub’s own consumed amount, which starts at its creation', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    let detail: Response = Response.json({ id: 'b1', consumed_amount: 1.5 });
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path.startsWith('/organizations/acme/settings/billing/budgets?')) {
+        return Response.json({
+          budgets: [{ id: 'b1', budget_product_sku: 'ai_credits', budget_amount: 50 }],
+        });
+      }
+      if (path === '/organizations/acme/settings/billing/budgets/b1') return detail;
+      if (path.includes('/settings/billing/usage?')) return Response.json({ usageItems: [] });
+      return new Response('{}', { status: 404 });
+    });
+
+    // The month's summary has $4.26 of AI credits; the budget only counts $1.50.
+    const usage = await GithubService.fetchUsage(NOW);
+    const row = usage?.windows.find((window) => window.id === 'acme:budget:ai_credits');
+    assert.equal(row?.limit.used, 1.5);
+
+    // Without the budget's own figure, its last row is kept instead.
+    detail = new Response('{}', { status: 502 });
+    const failed = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(failed?.budgetsMissing, ['acme']);
+    assert.ok(!failed?.windows.some((window) => window.id.startsWith('acme:budget:')));
+  });
+
   it('treats a budget listing still paging at the cap as a failed listing', async () => {
     store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
     mock.method(globalThis, 'fetch', async (url: string) => {

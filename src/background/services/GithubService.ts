@@ -76,6 +76,12 @@ export interface GithubBudget {
   amount: number;
   /** A `SkuPricing` budget names one SKU (e.g. `actions_linux`), not a product. */
   skuPricing?: boolean;
+  id?: string;
+  /**
+   * GitHub's own spend against the budget. It counts only usage since the
+   * budget was created, which the month's usage summary cannot tell apart.
+   */
+  consumed?: number;
 }
 
 export interface AccountBilling {
@@ -123,8 +129,9 @@ export const parseBudgets = (payload: unknown, org: string): GithubBudget[] => {
       : [readString(budget.budget_product_sku)];
     const amount = readNumber(budget.budget_amount);
     const skuPricing = readString(budget.budget_type) === 'SkuPricing';
+    const id = readString(budget.id);
     return skus.flatMap((sku) =>
-      sku ? [{ sku, amount, ...(skuPricing ? { skuPricing } : {}) }] : [],
+      sku ? [{ sku, amount, ...(skuPricing ? { skuPricing } : {}), ...(id ? { id } : {}) }] : [],
     );
   });
 };
@@ -188,7 +195,10 @@ export const buildAccountRows = (
   for (const budget of budgets) {
     if (budget.amount <= 0) continue;
     const spent = roundCents(
-      items.filter((item) => inBudget(item, budget)).reduce((sum, item) => sum + item.netAmount, 0),
+      budget.consumed ??
+        items
+          .filter((item) => inBudget(item, budget))
+          .reduce((sum, item) => sum + item.netAmount, 0),
     );
     rows.push({
       id: `${account.login}:budget:${budget.sku}`,
@@ -331,11 +341,15 @@ const fetchAccountBilling = async (
     fetchPublicMinutes(account, base, token, year, month),
   ]);
 
+  const parsed = budgets
+    ? await withConsumption(parseBudgets(budgets, account.login), base, token)
+    : null;
+
   return {
     account,
     items: parseBillingItems(summary.data),
-    budgets: budgets ? parseBudgets(budgets, account.login) : [],
-    ...(account.kind === 'organization' && !budgets ? { budgetsFailed: true } : {}),
+    budgets: parsed ?? [],
+    ...(account.kind === 'organization' && !parsed ? { budgetsFailed: true } : {}),
     ...(publicMinutes === null ? { minutesFailed: true } : {}),
     publicMinutes: publicMinutes ?? 0,
   };
@@ -420,6 +434,32 @@ export const carryBudgets = (next: GithubUsage, previous?: GithubUsage): GithubU
     windows.splice(after < 0 ? windows.length : after + 1, 0, ...kept);
   }
   return { ...next, windows };
+};
+
+/**
+ * Each live budget's own consumed amount, from its detail endpoint (the
+ * listing leaves it out). A budget created mid-month only counts usage since
+ * then, so the month's summary would overstate it. A budget split across
+ * several SKUs keeps the summed spend per SKU. Null if any lookup fails, so
+ * the last rows are kept rather than shown wrong.
+ */
+const withConsumption = async (
+  budgets: GithubBudget[],
+  base: string,
+  token: string,
+): Promise<GithubBudget[] | null> => {
+  const perId = new Map<string, number>();
+  for (const budget of budgets)
+    if (budget.id) perId.set(budget.id, (perId.get(budget.id) ?? 0) + 1);
+  const results = await mapLimited(budgets, async (budget) => {
+    if (budget.amount <= 0 || !budget.id || perId.get(budget.id) !== 1) return budget;
+    const detail = await githubGet(`${base}/budgets/${budget.id}`, token);
+    if (!detail.ok || !isObject(detail.data) || typeof detail.data.consumed_amount !== 'number') {
+      return null;
+    }
+    return { ...budget, consumed: detail.data.consumed_amount };
+  });
+  return results.includes(null) ? null : (results as GithubBudget[]);
 };
 
 /** Every page of an org's budget listing (10 per page by default), merged. */
