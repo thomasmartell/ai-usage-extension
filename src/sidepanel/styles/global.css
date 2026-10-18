@@ -203,6 +203,12 @@ input {
   gap: 14px;
 }
 
+/* Half-width rows are the less pressing figures: the bar's pace marker and
+   the "% through" line say enough, and the chip would crowd out the label. */
+.au-pair .au-pace-chip {
+  display: none;
+}
+
 /* ---- Full view (its own tab, not the 800×600-capped popup) ---------- */
 
 html[data-view='full'],

@@ -61,6 +61,7 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   emptyGithub:
     'Sign in to see Actions minutes and budget spend for your account and organizations.',
   githubActionsMinutes: 'Actions minutes',
+  githubApiCalls: 'API calls this hour',
   githubBudget: '$1 budget',
   githubUseToken: 'Use a token instead',
   githubTokenHint:

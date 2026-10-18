@@ -507,12 +507,18 @@ export class UsageService {
     // the 5-minute alarm firing a moment early.
     const due = (snapshot: { lastUpdated: number } | undefined, minutes: number) =>
       force || !snapshot || Date.now() - snapshot.lastUpdated >= minutes * 60_000 - 30_000;
-    const [claude, codex, github, netlify] = await Promise.all([
+    const [claude, codex, [github, apiLimit], netlify] = await Promise.all([
       this.fetchClaudeUsage().catch(() => null),
       this.fetchCodexUsage().catch(() => null),
-      due(stored.github, SLOW_REFRESH_MINUTES.github)
+      // The hourly API allowance is read every time (that read is free), and
+      // after the billing calls so it counts them.
+      (due(stored.github, SLOW_REFRESH_MINUTES.github)
         ? GithubService.fetchUsage(Date.now(), githubToken).catch(() => null)
-        : null,
+        : Promise.resolve(null)
+      ).then(
+        async (usage) =>
+          [usage, githubToken ? await GithubService.fetchRateLimit(githubToken) : null] as const,
+      ),
       due(stored.netlify, SLOW_REFRESH_MINUTES.netlify)
         ? NetlifyService.fetchUsage(Date.now(), netlifyToken).catch(() => null)
         : null,
@@ -531,8 +537,10 @@ export class UsageService {
         NetlifyService.currentToken(),
       ]);
       if (!githubNow) delete next.github;
-      else if (github && githubNow === githubToken)
-        next.github = carryBudgets(github, previousGithub);
+      else if (githubNow === githubToken) {
+        if (github) next.github = carryBudgets(github, previousGithub);
+        if (next.github && apiLimit) next.github.apiLimit = apiLimit;
+      }
       if (!netlifyNow) delete next.netlify;
       else if (netlify && netlifyNow === netlifyToken)
         next.netlify = carryCredits(netlify, previousNetlify);

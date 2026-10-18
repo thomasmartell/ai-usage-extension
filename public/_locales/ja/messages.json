@@ -140,6 +140,9 @@
   "githubActionsMinutes": {
     "message": "Actions 分数"
   },
+  "githubApiCalls": {
+    "message": "今時間の API 呼び出し"
+  },
   "githubBudget": {
     "message": "$1 予算"
   },

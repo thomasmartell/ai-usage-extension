@@ -1,6 +1,12 @@
 import { GITHUB_OAUTH, STORAGE_KEYS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
-import type { GithubAccount, GithubDeviceFlow, GithubUsage, ModelUsage } from '../../shared/types';
+import type {
+  GithubAccount,
+  GithubDeviceFlow,
+  GithubUsage,
+  ModelUsage,
+  UsageLimit,
+} from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
 
 const API = 'https://api.github.com';
@@ -501,6 +507,28 @@ const fetchPublicMinutes = async (
 };
 
 export class GithubService {
+  /**
+   * The user's hourly REST allowance. `/rate_limit` itself is free, so this
+   * can run on every refresh without using up what it measures.
+   */
+  static async fetchRateLimit(token: string): Promise<UsageLimit | null> {
+    const result = await githubGet('/rate_limit', token).catch(() => null);
+    if (!result?.ok || !isObject(result.data) || !isObject(result.data.resources)) return null;
+    const core = result.data.resources.core;
+    if (!isObject(core)) return null;
+    const limit = readNumber(core.limit);
+    const used = readNumber(core.used);
+    const reset = readNumber(core.reset);
+    if (limit <= 0 || reset <= 0) return null;
+    return {
+      percentage: clampPercent((used / limit) * 100),
+      resetsAt: new Date(reset * 1000).toISOString(),
+      windowMs: 60 * 60 * 1000,
+      used,
+      limit,
+    };
+  }
+
   static async isSignedIn(): Promise<boolean> {
     return (await readToken()) !== null;
   }

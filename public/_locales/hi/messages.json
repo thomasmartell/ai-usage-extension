@@ -140,6 +140,9 @@
   "githubActionsMinutes": {
     "message": "Actions मिनट"
   },
+  "githubApiCalls": {
+    "message": "इस घंटे के API कॉल"
+  },
   "githubBudget": {
     "message": "$1 बजट"
   },

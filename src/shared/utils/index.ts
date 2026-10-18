@@ -134,5 +134,6 @@ export const formatCount = ({ used = 0, limit = 0, unit }: UsageLimit): string =
     return msg('unitMinutes', [count.format(used), count.format(limit)]);
   }
 
-  return `${used} / ${limit}`;
+  const count = new Intl.NumberFormat(undefined);
+  return `${count.format(used)} / ${count.format(limit)}`;
 };

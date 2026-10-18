@@ -92,6 +92,11 @@ export interface GithubUsage {
   accountsMissing?: string[];
   /** Accounts whose public-repository minutes could not be read this time. */
   minutesMissing?: string[];
+  /**
+   * The signed-in user's hourly REST allowance, shared with everything else
+   * acting as them (`gh`, other apps). Shown on its own, not as a billing limit.
+   */
+  apiLimit?: UsageLimit;
   status: UsageStatus;
   lastUpdated: number;
 }

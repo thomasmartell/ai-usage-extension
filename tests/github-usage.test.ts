@@ -321,6 +321,22 @@ describe('GitHub usage request', () => {
     delete (globalThis as { chrome?: unknown }).chrome;
   });
 
+  it('reads the hourly API allowance from the free rate-limit endpoint', async () => {
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      assert.equal(url, 'https://api.github.com/rate_limit');
+      return Response.json({ resources: { core: { limit: 5000, used: 539, reset: 1792353160 } } });
+    });
+    assert.deepEqual(await GithubService.fetchRateLimit('test-token'), {
+      percentage: 11,
+      resetsAt: new Date(1792353160 * 1000).toISOString(),
+      windowMs: 3_600_000,
+      used: 539,
+      limit: 5000,
+    });
+    mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 500 }));
+    assert.equal(await GithubService.fetchRateLimit('test-token'), null);
+  });
+
   it('reads the user and every org it can bill, skipping orgs it cannot', async () => {
     const requests: string[] = [];
     mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {

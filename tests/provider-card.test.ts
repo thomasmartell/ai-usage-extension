@@ -100,6 +100,45 @@ describe('ProviderCard layout', () => {
     assert.ok(html.indexOf('Weekly · 7d') < html.indexOf('Session · 5h'));
     assert.doesNotMatch(html, /Plan · Max/);
   });
+
+  it('sets the session and a model limit side by side beneath the weekly one', () => {
+    const html = render({
+      plan: 'Max',
+      session: { ...limit, percentage: 33 },
+      weekly: { ...limit, percentage: 41 },
+      models: [{ id: 'fable', label: 'Fable', limit: { ...limit, percentage: 12 } }],
+      resets: [],
+      status: 'ok',
+      lastUpdated: NOW,
+    });
+    assert.match(html, /Weekly · 7d[^]*au-pair[^]*Session · 5h[^]*Fable/);
+    assert.doesNotMatch(html, /au-divider/);
+  });
+
+  it('shows GitHub’s hourly API allowance until its hour has passed', () => {
+    const github = (resetsAt: string) =>
+      renderToStaticMarkup(
+        createElement(ProviderCard, {
+          title: 'GitHub',
+          iconSrc: '',
+          iconAlt: '',
+          loading: false,
+          now: NOW,
+          emptyHint: 'empty',
+          usage: {
+            viewer: 'octo',
+            accounts: [],
+            windows: [],
+            models: [],
+            apiLimit: { percentage: 11, resetsAt, used: 539, limit: 5000, windowMs: 3_600_000 },
+            status: 'ok',
+            lastUpdated: NOW,
+          },
+        }),
+      );
+    assert.match(github('2026-10-15T06:30:00Z'), /API calls this hour[^]*539 \/ 5,000/);
+    assert.doesNotMatch(github('2026-10-15T05:30:00Z'), /API calls this hour/);
+  });
 });
 
 describe('ProviderCard lead figure', () => {

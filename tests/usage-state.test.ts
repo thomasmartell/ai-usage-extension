@@ -59,12 +59,16 @@ describe('Usage state updates', () => {
     mock.method(UsageService, 'fetchClaudeUsage', async () => null);
     mock.method(UsageService, 'fetchCodexUsage', async () => null);
     const github = mock.method(GithubService, 'fetchUsage', async () => null);
+    const rate = { percentage: 11, resetsAt: '2026-10-18T19:52:40.000Z', used: 539, limit: 5000 };
+    mock.method(GithubService, 'fetchRateLimit', async () => rate);
     const netlify = mock.method(NetlifyService, 'fetchUsage', async () => null);
 
     // GitHub was read 10 minutes ago (under 30); Netlify 20 (over 15).
     await UsageService.refreshAllUsage();
     assert.equal(github.mock.callCount(), 0);
     assert.equal(netlify.mock.callCount(), 1);
+    // The free hourly-allowance read still updates the snapshot.
+    assert.deepEqual((stored.ai_usage_state as UsageState).github?.apiLimit, rate);
 
     await UsageService.refreshAllUsage({ force: true });
     assert.equal(github.mock.callCount(), 1);

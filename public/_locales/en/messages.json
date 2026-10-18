@@ -140,6 +140,9 @@
   "githubActionsMinutes": {
     "message": "Actions minutes"
   },
+  "githubApiCalls": {
+    "message": "API calls this hour"
+  },
   "githubBudget": {
     "message": "$1 budget"
   },

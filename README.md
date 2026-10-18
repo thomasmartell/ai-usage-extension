@@ -22,6 +22,9 @@ return them — and surfaces them in a popup and the toolbar icon.
   for an organization choose **Use a token instead** and paste a fine-grained
   token owned by the organization with read-only **Administration** and **Plan**
   access, plus the organization's login (fine-grained tokens cannot list orgs).
+  The card also shows how much of your hourly GitHub API allowance is used. That
+  allowance is shared with `gh` and anything else acting as you, so it shows when
+  something is close to running it out.
 - **Netlify credits** (optional): paste a Netlify personal access token to see
   each team's monthly plan credits and purchased add-on credits. Teams on
   legacy plans see build minutes and bandwidth for the billing cycle instead.

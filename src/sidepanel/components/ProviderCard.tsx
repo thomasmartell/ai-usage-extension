@@ -158,6 +158,18 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
         : undefined;
 
   const { windows, models } = usage && !loading ? cardRows(usage) : { windows: [], models: [] };
+  // Without account headings (Claude, Codex), the longest window leads on its
+  // own and the shorter ones, like the 5-hour session and per-model limits,
+  // sit two abreast beneath it as the less pressing figures.
+  const minor = windows.some((row) => row.group) ? [] : [...windows.slice(1), ...models];
+  const pairMinor = minor.length >= 2;
+  // GitHub's hourly API allowance, until the hour it describes has passed.
+  const apiLimit =
+    usage && !loading && 'accounts' in usage && usage.apiLimit?.resetsAt
+      ? Date.parse(usage.apiLimit.resetsAt) > now
+        ? usage.apiLimit
+        : null
+      : null;
   const lead = usage && !loading ? leadFigure(usage) : null;
 
   const metric = (row: (typeof windows)[number]) => (
@@ -214,9 +226,33 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
         <Skeleton />
       ) : usage ? (
         <>
-          {renderRows(windows)}
-          {models.length > 0 && windows.length > 0 && <hr className="au-divider" />}
-          {renderRows(models)}
+          {pairMinor ? (
+            <>
+              {metric(windows[0])}
+              {Array.from({ length: Math.ceil(minor.length / 2) }, (_, index) => {
+                const pair = minor.slice(index * 2, index * 2 + 2);
+                return pair.length === 2 ? (
+                  <div className="au-pair" key={pair[0].id}>
+                    {pair.map(metric)}
+                  </div>
+                ) : (
+                  metric(pair[0])
+                );
+              })}
+            </>
+          ) : (
+            <>
+              {renderRows(windows)}
+              {models.length > 0 && windows.length > 0 && <hr className="au-divider" />}
+              {renderRows(models)}
+            </>
+          )}
+          {apiLimit && (
+            <>
+              <hr className="au-divider" />
+              {metric({ id: 'github-api', label: msg('githubApiCalls'), limit: apiLimit })}
+            </>
+          )}
           <ResetList usage={usage} />
         </>
       ) : (
