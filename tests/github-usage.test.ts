@@ -71,6 +71,27 @@ describe('GitHub billing rows', () => {
     assert.equal(rows[1].limit.unit, 'usd');
   });
 
+  it('accepts budgets listed with a SKU array', () => {
+    assert.deepEqual(
+      parseBudgets({
+        budgets: [{ budget_product_skus: ['actions', 'packages'], budget_amount: 20 }],
+      }),
+      [
+        { sku: 'actions', amount: 20 },
+        { sku: 'packages', amount: 20 },
+      ],
+    );
+  });
+
+  it('leaves free public-repository minutes out of the allowance', () => {
+    const [minutes] = buildAccountRows(
+      { account: org, items: parseBillingItems(summary), budgets: [], publicMinutes: 483 },
+      NOW,
+    );
+    assert.equal(minutes.limit.used, 18000);
+    assert.equal(minutes.limit.percentage, 36);
+  });
+
   it('omits the minutes row when the plan allowance is unknown', () => {
     const rows = buildAccountRows(
       { account: { ...org, plan: null }, items: parseBillingItems(summary), budgets: [] },
@@ -223,6 +244,45 @@ describe('GitHub usage request', () => {
     await GithubService.signOut();
     assert.equal(store.github_token, undefined);
     assert.equal(store.github_orgs, undefined);
+  });
+
+  it('subtracts minutes run in public repositories', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    const requests: string[] = [];
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      requests.push(path);
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage?')) {
+        return Response.json({
+          usageItems: [
+            { repositoryName: 'private-app', unitType: 'Minutes', quantity: 18000 },
+            { repositoryName: 'open-lib', unitType: 'Minutes', quantity: 223 },
+            { repositoryName: 'open-docs', unitType: 'GigabyteHours', quantity: 1 },
+          ],
+        });
+      }
+      if (path === '/orgs/acme/repos?type=public&per_page=100') {
+        return Response.json([{ name: 'open-lib' }, { name: 'open-docs' }]);
+      }
+      if (path.endsWith('&repository=acme/open-lib')) {
+        return Response.json({
+          usageItems: [{ product: 'Actions', sku: 'actions_linux', grossQuantity: 223 }],
+        });
+      }
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    // 18,483 weighted minutes in total, 223 of them free in open-lib.
+    assert.equal(usage?.windows[0].limit.used, 18260);
+    // open-docs only stored artifacts, so it is never summarised.
+    assert.ok(!requests.some((path) => path.endsWith('repository=acme/open-docs')));
   });
 
   it('signs out when GitHub rejects the stored token', async () => {

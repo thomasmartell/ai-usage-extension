@@ -63,6 +63,11 @@ export interface AccountBilling {
   account: GithubAccount;
   items: BillingItem[];
   budgets: GithubBudget[];
+  /**
+   * Actions minutes (already weighted) run in public repositories. Standard
+   * runners are free there, so these never draw on the included minutes.
+   */
+  publicMinutes?: number;
 }
 
 export const parseBillingItems = (payload: unknown): BillingItem[] => {
@@ -78,10 +83,19 @@ export const parseBillingItems = (payload: unknown): BillingItem[] => {
 export const parseBudgets = (payload: unknown): GithubBudget[] => {
   if (!isObject(payload) || !Array.isArray(payload.budgets)) return [];
   return payload.budgets.filter(isObject).flatMap((budget) => {
-    const sku = readString(budget.budget_product_sku);
-    return sku ? [{ sku, amount: readNumber(budget.budget_amount) }] : [];
+    // The listing returns `budget_product_sku`; GitHub's documented schema
+    // also shows a `budget_product_skus` array, so accept either.
+    const skus = Array.isArray(budget.budget_product_skus)
+      ? budget.budget_product_skus.map(readString)
+      : [readString(budget.budget_product_sku)];
+    const amount = readNumber(budget.budget_amount);
+    return skus.flatMap((sku) => (sku ? [{ sku, amount }] : []));
   });
 };
+
+/** Included-minute drawdown of a usage summary's standard hosted runner minutes. */
+export const actionsMinutes = (items: BillingItem[]): number =>
+  items.reduce((sum, item) => sum + item.grossQuantity * (MINUTE_MULTIPLIERS[item.sku] ?? 0), 0);
 
 /** The UTC calendar month GitHub bills in, as its start and end instants. */
 export const billingMonth = (
@@ -103,7 +117,7 @@ const roundCents = (value: number): number => Math.round(value * 100) / 100;
 
 /** Allowance and budget meters for one account's current month. */
 export const buildAccountRows = (
-  { account, items, budgets }: AccountBilling,
+  { account, items, budgets, publicMinutes = 0 }: AccountBilling,
   now: number,
 ): ModelUsage[] => {
   const { start, end } = billingMonth(now);
@@ -112,12 +126,7 @@ export const buildAccountRows = (
 
   const included = account.plan ? ACTIONS_INCLUDED_MINUTES[account.plan] : undefined;
   if (included) {
-    const used = Math.round(
-      items.reduce(
-        (sum, item) => sum + item.grossQuantity * (MINUTE_MULTIPLIERS[item.sku] ?? 0),
-        0,
-      ),
-    );
+    const used = Math.max(0, Math.round(actionsMinutes(items) - publicMinutes));
     rows.push({
       id: `${account.login}:actions-minutes`,
       label: msg('githubActionsMinutes'),
@@ -253,14 +262,68 @@ const fetchAccountBilling = async (
   }
 
   // Budgets are only exposed for organizations.
-  const budgets =
-    account.kind === 'organization' ? await githubGet(`${base}/budgets`, token) : null;
+  const [budgets, publicMinutes] = await Promise.all([
+    account.kind === 'organization' ? githubGet(`${base}/budgets`, token) : null,
+    fetchPublicMinutes(account, base, token, year, month),
+  ]);
 
   return {
     account,
     items: parseBillingItems(summary.data),
     budgets: budgets?.ok ? parseBudgets(budgets.data) : [],
+    publicMinutes,
   };
+};
+
+/**
+ * Minutes this month's summary counts for public repositories, where
+ * standard runners are free. The detailed report names each repository; any
+ * public one with usage is summarised on its own so the same SKU weighting
+ * applies. Most months that is no repository, costing two requests.
+ */
+const fetchPublicMinutes = async (
+  account: GithubAccount,
+  base: string,
+  token: string,
+  year: number,
+  month: number,
+): Promise<number> => {
+  const detailed = await githubGet(`${base}/usage?year=${year}&month=${month}`, token);
+  if (!detailed.ok || !isObject(detailed.data) || !Array.isArray(detailed.data.usageItems)) {
+    return 0;
+  }
+
+  const reposWithMinutes = new Set(
+    detailed.data.usageItems
+      .filter(isObject)
+      .filter((item) => readString(item.unitType)?.toLowerCase() === 'minutes')
+      .flatMap((item) => readString(item.repositoryName) ?? []),
+  );
+  if (reposWithMinutes.size === 0) return 0;
+
+  const reposPath =
+    account.kind === 'organization'
+      ? `/orgs/${account.login}/repos?type=public&per_page=100`
+      : `/users/${account.login}/repos?per_page=100`;
+  const repos = await githubGet(reposPath, token);
+  if (!repos.ok || !Array.isArray(repos.data)) return 0;
+
+  const publicRepos = repos.data
+    .filter(isObject)
+    .filter((repo) => repo.private !== true)
+    .flatMap((repo) => readString(repo.name) ?? [])
+    .filter((name) => reposWithMinutes.has(name));
+
+  const perRepo = await Promise.all(
+    publicRepos.map(async (name) => {
+      const summary = await githubGet(
+        `${base}/usage/summary?year=${year}&month=${month}&repository=${account.login}/${name}`,
+        token,
+      );
+      return summary.ok ? actionsMinutes(parseBillingItems(summary.data)) : 0;
+    }),
+  );
+  return perRepo.reduce((sum, minutes) => sum + minutes, 0);
 };
 
 export class GithubService {
