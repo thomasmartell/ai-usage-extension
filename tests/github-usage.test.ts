@@ -486,6 +486,32 @@ describe('GitHub usage request', () => {
     assert.ok(!requests.some((path) => path.endsWith('repository=acme/open-docs')));
   });
 
+  it('treats a public-repository list cut off at the page cap as unknown', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage?')) {
+        return Response.json({
+          usageItems: [{ repositoryName: 'open-lib', unitType: 'Minutes', quantity: 223 }],
+        });
+      }
+      // Every page is full, so the cap is reached with more still to come.
+      if (path.startsWith('/orgs/acme/repos?')) {
+        return Response.json(Array.from({ length: 100 }, (_, i) => ({ name: `filler-${i}` })));
+      }
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(usage?.minutesMissing, ['acme']);
+  });
+
   it('reads every page of the budget listing', async () => {
     store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
     mock.method(globalThis, 'fetch', async (url: string) => {

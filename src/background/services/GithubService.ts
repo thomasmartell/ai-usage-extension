@@ -456,11 +456,14 @@ const fetchPublicMinutes = async (
       ? `/orgs/${account.login}/repos?type=public&per_page=100`
       : `/users/${account.login}/repos?per_page=100`;
   const listed: unknown[] = [];
-  for (let page = 1; page <= REPO_PAGE_LIMIT; page += 1) {
+  for (let page = 1; ; page += 1) {
     const repos = await githubGet(`${reposPath}&page=${page}`, token);
     if (!repos.ok || !Array.isArray(repos.data)) return null;
     listed.push(...repos.data);
     if (repos.data.length < 100) break;
+    // Still full at the page cap: the list is cut short, so the public
+    // minutes are unknown rather than whatever the prefix happens to hold.
+    if (page === REPO_PAGE_LIMIT) return null;
   }
 
   const publicRepos = listed
