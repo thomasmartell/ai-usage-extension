@@ -410,6 +410,22 @@ describe('GitHub usage request', () => {
     assert.ok(usage?.unreadable.some((entry) => entry.login === 'last-org'));
   });
 
+  it('marks an org listing still full at the page cap as incomplete', async () => {
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) {
+        const page = path.split('page=').pop();
+        return Response.json(
+          Array.from({ length: 100 }, (_, i) => ({ login: `org-${page}-${i}` })),
+        );
+      }
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.equal(usage?.orgsIncomplete, true);
+  });
+
   it('keeps a newer token when an older one is rejected mid-refresh', async () => {
     mock.method(globalThis, 'fetch', async () => {
       store.github_token = 'newer-token';

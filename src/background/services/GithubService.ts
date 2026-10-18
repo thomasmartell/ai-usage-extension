@@ -534,6 +534,8 @@ export class GithubService {
         ),
       );
       if (orgs.data.length < 100) break;
+      // Still full at the page cap: later orgs keep their last rows.
+      if (page === REPO_PAGE_LIMIT) orgsIncomplete = true;
     }
     // Fine-grained tokens always get an empty org list, so the orgs saved
     // alongside a pasted token are checked too.
