@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Consulta límites de Claude y ChatGPT (Codex) por sesión y semana en popup, insignia y superposición. Privado y sin configuración."
+    "message": "Consulta límites de Claude y ChatGPT (Codex) por sesión y semana en popup e insignia. Privado y sin configuración."
   },
   "popupEyebrow": {
     "message": "Capacidad de IA"
@@ -106,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "Aún no hay datos. Abre chatgpt.com con sesión iniciada y actualiza."
-  },
-  "emptyOverlay": {
-    "message": "Aún no hay datos. Abre el popup y actualiza."
   },
   "sourceCode": {
     "message": "Código fuente"

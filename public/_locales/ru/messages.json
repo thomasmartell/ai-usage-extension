@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Отслеживайте лимиты Claude и ChatGPT (Codex) за сессию и неделю в попапе, бейдже и оверлее. Приватно, без настройки."
+    "message": "Отслеживайте лимиты Claude и ChatGPT (Codex) за сессию и неделю в попапе и бейдже. Приватно, без настройки."
   },
   "popupEyebrow": {
     "message": "AI-лимиты"
@@ -106,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "Данных пока нет. Откройте chatgpt.com под своим аккаунтом и обновите."
-  },
-  "emptyOverlay": {
-    "message": "Данных пока нет. Откройте попап и обновите."
   },
   "sourceCode": {
     "message": "Исходный код"

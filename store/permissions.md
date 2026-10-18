@@ -12,15 +12,15 @@ not for ourselves.
 ## storage
 
 The extension persists the most recent usage snapshot, the cached Claude
-organization id, and the user's overlay preferences in `chrome.storage.local`
-so they survive service worker restarts and tab reloads. Nothing is read from
+organization id, and the GitHub and Netlify tokens the user pastes in
+`chrome.storage.local` so they survive service worker restarts and tab reloads. Nothing is read from
 or written to any other storage backend.
 
 ## alarms
 
 A single recurring `chrome.alarms` entry wakes the service worker every five
-minutes to re-fetch the usage limits. Without it the on-page overlay would
-only update while the popup was open, which defeats the at-a-glance use case.
+minutes to re-fetch the usage limits. Without it the toolbar icon would only
+update while the popup was open, which defeats the at-a-glance use case.
 
 ## cookies
 
@@ -33,22 +33,13 @@ read, never written.
 
 Required to call the authenticated Claude usage endpoints
 (`/api/organizations` and `/api/organizations/{id}/usage`) with the user's
-existing session cookies, and to mount the on-page overlay next to the chat
-input. No requests are made to any other path on this host.
+existing session cookies. No requests are made to any other path on this host.
 
 ## host: https://chatgpt.com/*
 
 Required to call `/api/auth/session` (to obtain the short-lived access token
 the chatgpt.com web app already uses) and `/backend-api/wham/usage` (the rate
-limit endpoint), and to mount the on-page overlay on the Codex chat surface.
-No other endpoints are accessed.
-
-## host: https://chat.openai.com/*
-
-The legacy ChatGPT host that still resolves for some accounts. Same usage as
-`chatgpt.com` above: reading the user's own rate-limit data via their existing
-session and rendering the on-page overlay. Kept so signed-in users who land on
-the legacy domain see the same experience.
+limit endpoint). No other endpoints are accessed.
 
 ## host: https://api.github.com/*
 

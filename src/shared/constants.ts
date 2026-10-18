@@ -10,12 +10,6 @@ export const STORAGE_KEYS = {
   usageHistory: 'ai_usage_history',
   /** Cached Claude organization id used to build the usage endpoint. */
   claudeOrgId: 'claude_org_id',
-  /** Whether the on-page overlay is shown on claude.ai. */
-  claudeOverlayEnabled: 'claude_overlay_enabled',
-  /** Whether the on-page overlay is collapsed into its side tab. */
-  claudeOverlayCollapsed: 'claude_overlay_collapsed',
-  codexOverlayEnabled: 'codex_overlay_enabled',
-  codexOverlayCollapsed: 'codex_overlay_collapsed',
   /** OAuth token from GitHub's device flow; read only by the background worker. */
   githubToken: 'github_token',
   /** Organization logins saved with a pasted token, which cannot list them. */

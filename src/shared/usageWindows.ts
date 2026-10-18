@@ -47,7 +47,7 @@ export const withInferredWindow = (model: ModelUsage): ModelUsage => {
 };
 
 /**
- * Return the provider-level limits shown in the popup, overlay, and badge.
+ * Return the provider-level limits shown in the popup and badge.
  *
  * Codex windows are dynamic because the backend can return one or more periods
  * in either the primary or secondary slot. The legacy fallback keeps snapshots

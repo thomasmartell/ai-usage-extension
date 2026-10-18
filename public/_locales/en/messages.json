@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Track Claude and ChatGPT (Codex) session & weekly usage limits at a glance in a popup and on-page overlay. Privacy-first, no setup."
+    "message": "Track Claude and ChatGPT (Codex) session & weekly usage limits at a glance in a popup and toolbar badge. Privacy-first, no setup."
   },
   "popupEyebrow": {
     "message": "AI Capacity"
@@ -106,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "No data yet. Open chatgpt.com while signed in, then refresh."
-  },
-  "emptyOverlay": {
-    "message": "No data yet. Open the popup and refresh."
   },
   "sourceCode": {
     "message": "Source code"

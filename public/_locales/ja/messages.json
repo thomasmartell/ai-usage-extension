@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Claude と ChatGPT (Codex) のセッション・週間上限をポップアップ、バッジ、オーバーレイで確認。プライバシー重視、設定不要。"
+    "message": "Claude と ChatGPT (Codex) のセッション・週間上限をポップアップとバッジで確認。プライバシー重視、設定不要。"
   },
   "popupEyebrow": {
     "message": "AI 容量"
@@ -106,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "まだデータがありません。ログイン済みの chatgpt.com を開いて更新してください。"
-  },
-  "emptyOverlay": {
-    "message": "まだデータがありません。ポップアップを開いて更新してください。"
   },
   "sourceCode": {
     "message": "ソースコード"

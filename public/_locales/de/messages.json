@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "Verfolge Claude- und ChatGPT-(Codex)-Limits pro Sitzung und Woche in Popup, Badge und Overlay. Privat, ohne Einrichtung."
+    "message": "Verfolge Claude- und ChatGPT-(Codex)-Limits pro Sitzung und Woche in Popup und Badge. Privat, ohne Einrichtung."
   },
   "popupEyebrow": {
     "message": "KI-Kapazität"
@@ -106,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "Noch keine Daten. Öffne chatgpt.com angemeldet und aktualisiere."
-  },
-  "emptyOverlay": {
-    "message": "Noch keine Daten. Öffne das Popup und aktualisiere."
   },
   "sourceCode": {
     "message": "Quellcode"

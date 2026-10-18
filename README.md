@@ -5,8 +5,7 @@
 
 A Chrome extension (Manifest V3) that tracks your **Claude** and **Codex** usage
 limits — including 5-hour session and 7-day weekly windows when the providers
-return them — and surfaces them in a popup, an on-page overlay, and the toolbar
-badge.
+return them — and surfaces them in a popup and the toolbar icon.
 
 ## Features
 
@@ -29,9 +28,8 @@ badge.
 - **Full view**: the expand button opens the dashboard in its own tab, free of
   the 800×600 popup limit. Claude and Codex sit beside GitHub and Netlify in one
   row of four on a wide screen, or as a 2×2 grid on a narrower window.
-- **Toolbar badge** showing your highest current usage at a glance.
-- **On-page overlay** on `claude.ai` — a collapsible capsule rendered in a Shadow DOM,
-  so it never clashes with the host page's styles.
+- **Toolbar icon** with one bar per connected service, each filled to the figure its
+  card leads with and coloured amber or red as it nears the limit.
 - **Background refresh** every 5 minutes via `chrome.alarms`, plus on-demand refresh.
 - **Private by design**: usage is read from your own authenticated sessions with
   Claude and OpenAI, and from GitHub's API with a token only you grant. No external
@@ -66,21 +64,20 @@ messaging layer:
 src/
   background/   # Service worker: scheduling, fetching, badge updates
     services/   # UsageService — fetches & parses provider APIs
-  content/      # claude.ai overlay (React in Shadow DOM)
   sidepanel/    # Popup UI (React)
     components/ # Presentational components
     hooks/      # useUsageData — owns the popup's data lifecycle
   shared/       # Cross-context layer — no context-specific imports
     constants  # Storage keys, alarm name, thresholds
-    hooks      # Framework hooks shared by popup & overlay (useNow)
+    hooks      # Framework hooks (useNow)
     messaging  # Typed message helpers (readUsageState, requestUsageRefresh)
     types      # Domain & messaging types
     utils      # clampPercent, getUsageTone, formatReset, formatRelativeTime
 ```
 
 **Data flow:** the background worker fetches usage, writes a `UsageState` snapshot to
-`chrome.storage.local`, and updates the badge. The popup and overlay read that
-snapshot and subscribe to `chrome.storage.onChanged`, so every surface stays in sync.
+`chrome.storage.local`, and updates the toolbar icon. The popup reads that snapshot
+and subscribes to `chrome.storage.onChanged`, so it stays in sync.
 
 ## Getting Started
 

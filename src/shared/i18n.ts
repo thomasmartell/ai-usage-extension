@@ -2,7 +2,7 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   appName: 'AI Usage Tracker: Claude & Codex Limits',
   appShortName: 'AI Usage Tracker',
   appDescription:
-    'Track Claude and ChatGPT (Codex) session and weekly usage limits in a popup, toolbar badge, and on-page overlay. Privacy-first, no setup.',
+    'Track Claude and ChatGPT (Codex) session & weekly usage limits at a glance in a popup and toolbar badge. Privacy-first, no setup.',
   popupEyebrow: 'AI Capacity',
   popupTitle: 'Usage',
   openFullView: 'Open full view',
@@ -58,7 +58,6 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   limitsTab: 'LIMITS',
   emptyClaude: 'No data yet. Open claude.ai while signed in, then refresh.',
   emptyCodex: 'No data yet. Open chatgpt.com while signed in, then refresh.',
-  emptyOverlay: 'No data yet. Open the popup and refresh.',
   emptyGithub:
     'Sign in to see Actions minutes and budget spend for your account and organizations.',
   githubActionsMinutes: 'Actions minutes',

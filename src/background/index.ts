@@ -5,6 +5,13 @@ import { GithubService } from './services/GithubService';
 import { NetlifyService } from './services/NetlifyService';
 import { UsageService } from './services/UsageService';
 
+const LEGACY_OVERLAY_KEYS = [
+  'claude_overlay_enabled',
+  'claude_overlay_collapsed',
+  'codex_overlay_enabled',
+  'codex_overlay_collapsed',
+];
+
 let hasStartedRefresh = false;
 let refreshInFlight: Promise<UsageState> | null = null;
 let badgeUpdateQueue: Promise<void> = Promise.resolve();
@@ -42,6 +49,8 @@ void UsageService.getUsageState()
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create(REFRESH_ALARM, { periodInMinutes: REFRESH_INTERVAL_MINUTES });
+  // Preferences left behind by the on-page overlays, which have been removed.
+  void chrome.storage.local.remove(LEGACY_OVERLAY_KEYS);
   void refreshUsage().catch(() => undefined);
 });
 

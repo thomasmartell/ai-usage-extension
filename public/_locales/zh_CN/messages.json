@@ -6,7 +6,7 @@
     "message": "AI Usage Tracker"
   },
   "appDescription": {
-    "message": "在弹窗、徽章和页面浮层中跟踪 Claude 与 ChatGPT (Codex) 的会话和每周限额。注重隐私，无需设置。"
+    "message": "在弹窗和徽章中跟踪 Claude 与 ChatGPT (Codex) 的会话和每周限额。注重隐私，无需设置。"
   },
   "popupEyebrow": {
     "message": "AI 容量"
@@ -106,9 +106,6 @@
   },
   "emptyCodex": {
     "message": "暂无数据。请在登录状态下打开 chatgpt.com，然后刷新。"
-  },
-  "emptyOverlay": {
-    "message": "暂无数据。请打开弹窗并刷新。"
   },
   "sourceCode": {
     "message": "源代码"
