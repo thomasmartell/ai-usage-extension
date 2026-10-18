@@ -26,6 +26,14 @@ export const REFRESH_ALARM = 'refreshUsage';
 /** How often the background worker re-fetches usage, in minutes. */
 export const REFRESH_INTERVAL_MINUTES = 5;
 
+/**
+ * Background refreshes leave GitHub and Netlify alone until their snapshot is
+ * this old, in minutes. Their billing figures change slowly, and GitHub's
+ * hourly request allowance is shared with everything else acting as the user.
+ * A refresh the user asks for always fetches.
+ */
+export const SLOW_REFRESH_MINUTES = { github: 30, netlify: 15 } as const;
+
 /** Fixed window lengths, in milliseconds, for the limits Claude reports. */
 export const WINDOW_MS = {
   fiveHours: 5 * 60 * 60 * 1000,

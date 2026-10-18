@@ -30,7 +30,10 @@ return them — and surfaces them in a popup and the toolbar icon.
   row of four on a wide screen, or as a 2×2 grid on a narrower window.
 - **Toolbar icon** with one bar per connected service, each filled to the figure its
   card leads with and coloured amber or red as it nears the limit.
-- **Background refresh** every 5 minutes via `chrome.alarms`, plus on-demand refresh.
+- **Background refresh** via `chrome.alarms`: Claude and Codex every 5 minutes,
+  Netlify every 15 and GitHub every 30, since billing figures change slowly and
+  GitHub's hourly request allowance is shared with everything else using your
+  account. The refresh button fetches everything at once.
 - **Private by design**: usage is read from your own authenticated sessions with
   Claude and OpenAI, and from GitHub's API with a token only you grant. No external
   servers, no accounts, no tracking.

@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, WINDOW_MS } from '../../shared/constants';
+import { SLOW_REFRESH_MINUTES, STORAGE_KEYS, WINDOW_MS } from '../../shared/constants';
 import { msg } from '../../shared/i18n';
 import { accountFingerprint } from '../../shared/diagnostics';
 import {
@@ -492,16 +492,30 @@ export class UsageService {
     await chrome.storage.local.set({ [STORAGE_KEYS.usageState]: state });
   }
 
-  static async refreshAllUsage(): Promise<UsageState> {
-    const [githubToken, netlifyToken] = await Promise.all([
+  /**
+   * Fetch every provider and store the result. Unless `force` is set (a
+   * refresh the user asked for, or a new token), GitHub and Netlify are only
+   * fetched once their snapshot is `SLOW_REFRESH_MINUTES` old.
+   */
+  static async refreshAllUsage({ force = false } = {}): Promise<UsageState> {
+    const [githubToken, netlifyToken, stored] = await Promise.all([
       GithubService.currentToken(),
       NetlifyService.currentToken(),
+      this.getUsageState(),
     ]);
+    // Half a minute of slack, so a 30-minute cadence is not pushed to 35 by
+    // the 5-minute alarm firing a moment early.
+    const due = (snapshot: { lastUpdated: number } | undefined, minutes: number) =>
+      force || !snapshot || Date.now() - snapshot.lastUpdated >= minutes * 60_000 - 30_000;
     const [claude, codex, github, netlify] = await Promise.all([
       this.fetchClaudeUsage().catch(() => null),
       this.fetchCodexUsage().catch(() => null),
-      GithubService.fetchUsage(Date.now(), githubToken).catch(() => null),
-      NetlifyService.fetchUsage(Date.now(), netlifyToken).catch(() => null),
+      due(stored.github, SLOW_REFRESH_MINUTES.github)
+        ? GithubService.fetchUsage(Date.now(), githubToken).catch(() => null)
+        : null,
+      due(stored.netlify, SLOW_REFRESH_MINUTES.netlify)
+        ? NetlifyService.fetchUsage(Date.now(), netlifyToken).catch(() => null)
+        : null,
     ]);
 
     return this.updateUsageState(async (next) => {

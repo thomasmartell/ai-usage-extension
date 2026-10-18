@@ -23,15 +23,18 @@ const queueBadgeUpdate = (state: UsageState): Promise<void> => {
 
 /** A refresh that starts after any in-flight one, so it reads current tokens. */
 const refreshUsageAfterChange = (): Promise<UsageState> =>
-  (refreshInFlight ?? Promise.resolve()).catch(() => undefined).then(() => refreshUsage());
+  (refreshInFlight ?? Promise.resolve())
+    .catch(() => undefined)
+    .then(() => refreshUsage({ force: true }));
 
-const refreshUsage = (): Promise<UsageState> => {
+/** `force` fetches GitHub and Netlify even if their snapshot is still recent. */
+const refreshUsage = ({ force = false } = {}): Promise<UsageState> => {
   if (refreshInFlight) {
     return refreshInFlight;
   }
 
   hasStartedRefresh = true;
-  refreshInFlight = UsageService.refreshAllUsage()
+  refreshInFlight = UsageService.refreshAllUsage({ force })
     .then(async (state) => {
       await queueBadgeUpdate(state);
       return state;
@@ -97,7 +100,8 @@ chrome.runtime.onMessage.addListener(
   (message: ExtensionMessage, _sender, sendResponse: (response: MessageResponse) => void) => {
     switch (message?.type) {
       case 'REFRESH_USAGE':
-        return respond(refreshUsage(), sendResponse, 'refresh_failed');
+        // Asked for from the popup, so every provider is fetched now.
+        return respond(refreshUsage({ force: true }), sendResponse, 'refresh_failed');
       case 'GITHUB_SIGN_IN':
         return respond(
           GithubService.startSignIn(() => void refreshUsageAfterChange().catch(() => undefined)),
