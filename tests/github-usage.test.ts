@@ -654,6 +654,22 @@ describe('GitHub usage request', () => {
     );
   });
 
+  it('does not bring back a listed org whose billing is now refused', () => {
+    const limit = { percentage: 10, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = buildGithubUsage('octo', [], NOW);
+    previous.accounts = [{ login: 'acme', kind: 'organization', plan: 'enterprise' }];
+    previous.windows = [
+      { id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit },
+    ];
+    // The listing failed on a later page, but acme was on page 1 and now answers 404.
+    const next = {
+      ...buildGithubUsage('octo', [], NOW, [{ login: 'acme', status: 404 }]),
+      orgsIncomplete: true,
+      orgsChecked: ['acme'],
+    };
+    assert.deepEqual(carryBudgets(next, previous).windows, []);
+  });
+
   it('keeps an account whose summary failed with a server error', async () => {
     store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
     mock.method(globalThis, 'fetch', async (url: string) => {

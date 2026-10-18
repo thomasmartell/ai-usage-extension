@@ -334,6 +334,8 @@ const fetchAccountBilling = async (
 const carryOrgs = (next: GithubUsage, previous?: GithubUsage): GithubUsage => {
   if (!previous || (!next.orgsIncomplete && !next.accountsMissing?.length)) return next;
   const known = new Set(next.accounts.map((account) => account.login));
+  // Orgs this refresh did list (read or not): only those absent from it were missed.
+  const checked = new Set(next.orgsChecked);
   const missing = new Set(next.accountsMissing);
   const current = (row: ModelUsage) =>
     row.limit.resetsAt !== null && Date.parse(row.limit.resetsAt) > next.lastUpdated;
@@ -342,7 +344,8 @@ const carryOrgs = (next: GithubUsage, previous?: GithubUsage): GithubUsage => {
     .filter(
       (account) =>
         !known.has(account.login) &&
-        (missing.has(account.login) || (next.orgsIncomplete && account.kind === 'organization')),
+        (missing.has(account.login) ||
+          (next.orgsIncomplete && account.kind === 'organization' && !checked.has(account.login))),
     )
     .map((account) => ({
       account,
@@ -589,7 +592,7 @@ export class GithubService {
     return {
       ...usage,
       ...(minutesMissing.length > 0 ? { minutesMissing } : {}),
-      ...(orgsIncomplete ? { orgsIncomplete } : {}),
+      ...(orgsIncomplete ? { orgsIncomplete, orgsChecked: orgLogins } : {}),
       ...(accountsMissing.length > 0 ? { accountsMissing } : {}),
     };
   }
