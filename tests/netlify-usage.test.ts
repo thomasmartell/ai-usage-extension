@@ -158,7 +158,8 @@ describe('Netlify usage request', () => {
     assert.deepEqual(usage?.teams, [{ slug: 'acme', name: 'Acme team', plan: 'Pro' }]);
     assert.deepEqual(
       usage?.windows.map((row) => row.id),
-      ['acme:plan-credits', 'acme:addon-credits', 'acme:build-minutes', 'acme:bandwidth'],
+      // The legacy minute and bandwidth allowances are dropped beside credits.
+      ['acme:plan-credits', 'acme:addon-credits'],
     );
     assert.equal(usage?.status, 'ok');
     assert.equal(requests.length, 3);

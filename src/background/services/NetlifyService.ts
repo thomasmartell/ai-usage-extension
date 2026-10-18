@@ -126,6 +126,10 @@ export const buildAccountRows = (
     });
   }
 
+  // Credit plans charge deploys and bandwidth in credits, so any minute or
+  // bandwidth allowance still reported alongside them is not a live limit.
+  if (plan) return rows;
+
   const fallback = quota(account.capabilities, 'build_minutes');
   const used = readAmount(minutes.current) ?? fallback?.used ?? null;
   const included =
