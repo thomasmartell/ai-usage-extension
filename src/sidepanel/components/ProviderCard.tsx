@@ -13,6 +13,7 @@ import {
   withInferredWindow,
   type ProviderUsage,
 } from '../../shared/usageWindows';
+import type { ModelUsage } from '../../shared/types';
 import { UsageCard } from './UsageCard';
 import { UsageMetric } from './UsageMetric';
 
@@ -65,6 +66,26 @@ const leadFigure = (usage: ProviderUsage): { percent: number; caption: string } 
           ? msg('cycleShort')
           : '',
   };
+};
+
+/**
+ * Budgets (spending caps in USD) sit two abreast: each is one short line,
+ * and pairing them keeps the cards short enough for the 2×2 popup.
+ */
+const pairBudgets = (rows: ModelUsage[]): Array<ModelUsage | [ModelUsage, ModelUsage]> => {
+  const items: Array<ModelUsage | [ModelUsage, ModelUsage]> = [];
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const next = rows[index + 1];
+    const isBudget = (candidate?: ModelUsage) => candidate?.limit.unit === 'usd';
+    if (isBudget(row) && isBudget(next) && next!.group === row.group) {
+      items.push([row, next!]);
+      index += 1;
+    } else {
+      items.push(row);
+    }
+  }
+  return items;
 };
 
 /** Reset credits the provider has granted, soonest-expiring first. */
@@ -129,26 +150,36 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   const { windows, models } = usage && !loading ? cardRows(usage) : { windows: [], models: [] };
   const lead = usage && !loading ? leadFigure(usage) : null;
 
+  const metric = (row: (typeof windows)[number]) => (
+    <UsageMetric
+      key={row.id}
+      label={row.label}
+      limit={row.limit}
+      secondaryResetsAt={row.secondaryResetsAt}
+      showReset={!row.group}
+      now={now}
+    />
+  );
+
   const renderRows = (rows: typeof windows) =>
-    rows.map((row, index) => (
-      <React.Fragment key={row.id}>
-        {row.group && row.group !== rows[index - 1]?.group && (
-          <p className="au-group">
-            <span>{row.group}</span>
-            {row.limit.resetsAt && (
-              <span>{msg('nextResetLabel', formatExpiryDate(row.limit.resetsAt))}</span>
-            )}
-          </p>
-        )}
-        <UsageMetric
-          label={row.label}
-          limit={row.limit}
-          secondaryResetsAt={row.secondaryResetsAt}
-          showReset={!row.group}
-          now={now}
-        />
-      </React.Fragment>
-    ));
+    pairBudgets(rows).map((item, index, items) => {
+      const first = Array.isArray(item) ? item[0] : item;
+      const previous = items[index - 1];
+      const previousGroup = (Array.isArray(previous) ? previous[0] : previous)?.group;
+      return (
+        <React.Fragment key={first.id}>
+          {first.group && first.group !== previousGroup && (
+            <p className="au-group">
+              <span>{first.group}</span>
+              {first.limit.resetsAt && (
+                <span>{msg('nextResetLabel', formatExpiryDate(first.limit.resetsAt))}</span>
+              )}
+            </p>
+          )}
+          {Array.isArray(item) ? <div className="au-pair">{item.map(metric)}</div> : metric(item)}
+        </React.Fragment>
+      );
+    });
 
   return (
     <UsageCard

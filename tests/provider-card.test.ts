@@ -133,6 +133,42 @@ describe('ProviderCard lead figure', () => {
   });
 });
 
+describe('ProviderCard budget pairs', () => {
+  it('sets two budgets of one account side by side', () => {
+    const budget = (id: string, label: string) => ({
+      id,
+      label,
+      group: 'acme',
+      limit: {
+        percentage: 0,
+        resetsAt: '2026-11-01T00:00:00Z',
+        used: 0,
+        limit: 50,
+        unit: 'usd' as const,
+      },
+    });
+    const html = renderToStaticMarkup(
+      createElement(ProviderCard, {
+        title: 'GitHub',
+        iconSrc: '',
+        iconAlt: '',
+        loading: false,
+        now: NOW,
+        emptyHint: 'empty',
+        usage: {
+          viewer: 'octo',
+          accounts: [],
+          windows: [budget('a', 'Actions budget'), budget('b', 'AI credits budget')],
+          models: [],
+          status: 'ok',
+          lastUpdated: NOW,
+        },
+      }),
+    );
+    assert.match(html, /au-pair[^]*Actions budget[^]*AI credits budget/);
+  });
+});
+
 describe('Headline', () => {
   it('names a Netlify limit when it is the fullest', () => {
     const html = renderToStaticMarkup(

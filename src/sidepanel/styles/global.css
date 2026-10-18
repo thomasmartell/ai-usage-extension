@@ -66,10 +66,10 @@ input {
 
 .au-shell {
   background: radial-gradient(90% 70% at 0% 0%, rgba(235, 233, 228, 0.045), transparent 70%);
-  padding: 14px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* ---- Top bar -------------------------------------------------------- */
@@ -173,12 +173,34 @@ input {
 
 /* ---- Cards ---------------------------------------------------------- */
 
-/* One column per provider, so the popup grows wider rather than taller. */
+/* A 2×2 grid: assistants on top, services beneath. Cards in a row share its
+   height, with their footers pinned to the bottom so the rows line up. */
 .au-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 8px;
+}
+
+.au-cards > .au-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.au-cards > .au-card > .au-card__body {
+  flex: 1;
+}
+
+.au-card__body > .au-footnote:last-child,
+.au-card__body > .au-github__account:last-child {
+  margin-top: auto;
+}
+
+/* Rows without a window of their own (GitHub's budgets) sit two abreast. */
+.au-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 /* ---- Full view (its own tab, not the 800×600-capped popup) ---------- */
@@ -214,6 +236,12 @@ html[data-view='full'] .au-shell {
 
   .au-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Four cards in a row are too narrow to pair budgets. */
+  html[data-view='full'] .au-pair {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
   }
 }
 
@@ -251,14 +279,6 @@ html[data-view='full'] .au-card {
   padding: 16px 18px;
 }
 
-/* The middle column stacks Codex over Netlify, which are both short. */
-.au-column {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
 .au-group {
   display: flex;
   justify-content: space-between;
@@ -291,12 +311,11 @@ html[data-view='full'] .au-card {
   border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 48px), var(--au-surface);
-  padding: 12px;
+  padding: 11px 12px;
   animation: au-rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-.au-card:nth-child(2),
-.au-column > .au-card:first-child {
+.au-card:nth-child(2) {
   animation-delay: 50ms;
 }
 
@@ -304,8 +323,8 @@ html[data-view='full'] .au-card {
   animation-delay: 100ms;
 }
 
-.au-column > .au-card:nth-child(2) {
-  animation-delay: 100ms;
+.au-card:nth-child(4) {
+  animation-delay: 150ms;
 }
 
 @keyframes au-rise {
@@ -454,6 +473,10 @@ html[data-view='full'] .au-card {
 .au-card__body {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+html[data-view='full'] .au-card__body {
   gap: 10px;
 }
 
