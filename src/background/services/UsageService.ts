@@ -501,12 +501,14 @@ export class UsageService {
     const next = await this.getUsageState();
     if (claude) next.claude = claude;
     if (codex) next.codex = codex;
-    if (github) {
+    // Check sign-in again now rather than trusting the fetch: a sign-out
+    // while this refresh was in flight must not have its snapshot restored.
+    if (github && (await GithubService.isSignedIn())) {
       next.github = github;
     } else if (!(await GithubService.isSignedIn())) {
       delete next.github;
     }
-    if (netlify) {
+    if (netlify && (await NetlifyService.isSignedIn())) {
       next.netlify = netlify;
     } else if (!(await NetlifyService.isSignedIn())) {
       delete next.netlify;

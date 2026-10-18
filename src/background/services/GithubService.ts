@@ -302,6 +302,8 @@ const fetchBudgets = async (base: string, token: string): Promise<Json | null> =
   return { budgets };
 };
 
+const REPO_PAGE_LIMIT = 10;
+
 /**
  * Minutes this month's summary counts for public repositories, where
  * standard runners are free. The detailed report names each repository; any
@@ -320,11 +322,13 @@ const fetchPublicMinutes = async (
     return 0;
   }
 
+  // The live report names repositories bare (`almanac`); GitHub's documented
+  // example uses `owner/name`. Compare on the bare name either way.
   const reposWithMinutes = new Set(
     detailed.data.usageItems
       .filter(isObject)
       .filter((item) => readString(item.unitType)?.toLowerCase() === 'minutes')
-      .flatMap((item) => readString(item.repositoryName) ?? []),
+      .flatMap((item) => readString(item.repositoryName)?.split('/').pop() ?? []),
   );
   if (reposWithMinutes.size === 0) return 0;
 
@@ -332,10 +336,15 @@ const fetchPublicMinutes = async (
     account.kind === 'organization'
       ? `/orgs/${account.login}/repos?type=public&per_page=100`
       : `/users/${account.login}/repos?per_page=100`;
-  const repos = await githubGet(reposPath, token);
-  if (!repos.ok || !Array.isArray(repos.data)) return 0;
+  const listed: unknown[] = [];
+  for (let page = 1; page <= REPO_PAGE_LIMIT; page += 1) {
+    const repos = await githubGet(`${reposPath}&page=${page}`, token);
+    if (!repos.ok || !Array.isArray(repos.data)) break;
+    listed.push(...repos.data);
+    if (repos.data.length < 100) break;
+  }
 
-  const publicRepos = repos.data
+  const publicRepos = listed
     .filter(isObject)
     .filter((repo) => repo.private !== true)
     .flatMap((repo) => readString(repo.name) ?? [])

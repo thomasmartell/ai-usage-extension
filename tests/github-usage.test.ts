@@ -320,13 +320,21 @@ describe('GitHub usage request', () => {
         return Response.json({
           usageItems: [
             { repositoryName: 'private-app', unitType: 'Minutes', quantity: 18000 },
-            { repositoryName: 'open-lib', unitType: 'Minutes', quantity: 223 },
+            // GitHub's documented example names repositories `owner/name`.
+            { repositoryName: 'acme/open-lib', unitType: 'Minutes', quantity: 223 },
             { repositoryName: 'open-docs', unitType: 'GigabyteHours', quantity: 1 },
           ],
         });
       }
-      if (path === '/orgs/acme/repos?type=public&per_page=100') {
-        return Response.json([{ name: 'open-lib' }, { name: 'open-docs' }]);
+      if (path === '/orgs/acme/repos?type=public&per_page=100&page=1') {
+        // A full first page sends the listing on to page 2.
+        return Response.json([
+          ...Array.from({ length: 99 }, (_, i) => ({ name: `filler-${i}` })),
+          { name: 'open-docs' },
+        ]);
+      }
+      if (path === '/orgs/acme/repos?type=public&per_page=100&page=2') {
+        return Response.json([{ name: 'open-lib' }]);
       }
       if (path.endsWith('&repository=acme/open-lib')) {
         return Response.json({
