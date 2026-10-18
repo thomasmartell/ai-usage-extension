@@ -48,6 +48,7 @@ const PROVIDER_TITLE: Record<ProviderId, string> = {
   claude: 'Claude',
   codex: 'Codex',
   github: 'GitHub',
+  netlify: 'Netlify',
 };
 
 interface UsageSummary {
@@ -58,7 +59,7 @@ interface UsageSummary {
 const summarizeUsage = (state: UsageState): UsageSummary | null => {
   const rows: Array<{ provider: ProviderId; label: string; percent: number }> = [];
 
-  (['claude', 'codex', 'github'] as const).forEach((provider) => {
+  (['claude', 'codex', 'github', 'netlify'] as const).forEach((provider) => {
     const usage = state[provider];
     if (!usage) return;
     const highest = highestUsageWindow(usage);

@@ -220,5 +220,26 @@
   },
   "expiresLabel": {
     "message": "expires $1"
+  },
+  "netlifyBuildMinutes": {
+    "message": "Build minutes"
+  },
+  "netlifyBandwidth": {
+    "message": "Bandwidth"
+  },
+  "emptyNetlify": {
+    "message": "Paste a Netlify personal access token to see build minutes and bandwidth."
+  },
+  "netlifyCreateToken": {
+    "message": "Create one on Netlify"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 GB"
+  },
+  "cycleShort": {
+    "message": "this cycle"
+  },
+  "openUsagePage": {
+    "message": "Open $1 usage page"
   }
 }

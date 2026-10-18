@@ -220,5 +220,26 @@
   },
   "expiresLabel": {
     "message": "$1 到期"
+  },
+  "netlifyBuildMinutes": {
+    "message": "构建分钟数"
+  },
+  "netlifyBandwidth": {
+    "message": "带宽"
+  },
+  "emptyNetlify": {
+    "message": "粘贴 Netlify 个人访问令牌以查看构建分钟数和带宽。"
+  },
+  "netlifyCreateToken": {
+    "message": "在 Netlify 上创建"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 GB"
+  },
+  "cycleShort": {
+    "message": "本周期"
+  },
+  "openUsagePage": {
+    "message": "打开 $1 用量页面"
   }
 }

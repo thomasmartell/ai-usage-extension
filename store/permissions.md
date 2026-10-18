@@ -65,3 +65,10 @@ extension only ever sends GET requests to this host.
 Used only for GitHub's OAuth device flow: `/login/device/code` issues the
 one-time code the user enters on github.com, and `/login/oauth/access_token`
 returns the token once they approve it. No other path on this host is called.
+
+## host: https://api.netlify.com/*
+
+Optional Netlify tracking. With a personal access token the user pastes, the
+extension reads their teams (`/api/v1/accounts`) and each team's build status
+(`/api/v1/{team}/builds/status`) to show build minutes and bandwidth used
+this billing cycle. It only sends GET requests and never changes anything.

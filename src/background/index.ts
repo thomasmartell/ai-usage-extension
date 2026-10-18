@@ -2,6 +2,7 @@ import { REFRESH_ALARM, REFRESH_INTERVAL_MINUTES } from '../shared/constants';
 import type { ExtensionMessage, MessageResponse, UsageState } from '../shared/types';
 import { updateBadge } from './badge';
 import { GithubService } from './services/GithubService';
+import { NetlifyService } from './services/NetlifyService';
 import { UsageService } from './services/UsageService';
 
 let hasStartedRefresh = false;
@@ -66,10 +67,14 @@ const respond = <T>(
   return true;
 };
 
-const signOutOfGithub = async (): Promise<UsageState> => {
-  await GithubService.signOut();
+/** Forget a provider's token and drop its snapshot from the stored state. */
+const signOutOf = async (
+  provider: 'github' | 'netlify',
+  signOut: () => Promise<void>,
+): Promise<UsageState> => {
+  await signOut();
   const state = await UsageService.getUsageState();
-  delete state.github;
+  delete state[provider];
   await UsageService.saveUsageState(state);
   await queueBadgeUpdate(state);
   return state;
@@ -93,7 +98,23 @@ chrome.runtime.onMessage.addListener(
           'token_rejected',
         );
       case 'GITHUB_SIGN_OUT':
-        return respond(signOutOfGithub(), sendResponse, 'sign_out_failed');
+        return respond(
+          signOutOf('github', () => GithubService.signOut()),
+          sendResponse,
+          'sign_out_failed',
+        );
+      case 'NETLIFY_SAVE_TOKEN':
+        return respond(
+          NetlifyService.saveToken(message.token).then(refreshUsage),
+          sendResponse,
+          'token_rejected',
+        );
+      case 'NETLIFY_SIGN_OUT':
+        return respond(
+          signOutOf('netlify', () => NetlifyService.signOut()),
+          sendResponse,
+          'sign_out_failed',
+        );
       default:
         return undefined;
     }

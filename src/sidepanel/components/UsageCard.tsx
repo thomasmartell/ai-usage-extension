@@ -5,6 +5,8 @@ interface UsageCardProps {
   subtitle?: string;
   iconSrc?: string;
   iconAlt?: string;
+  /** The provider's own usage page, linked from the title. */
+  href?: string;
   /** Content pinned to the right of the header, e.g. the card's peak usage. */
   aside?: React.ReactNode;
   children: React.ReactNode;
@@ -16,6 +18,7 @@ export const UsageCard: React.FC<UsageCardProps> = ({
   subtitle,
   iconSrc,
   iconAlt,
+  href,
   aside,
   children,
 }) => {
@@ -24,7 +27,15 @@ export const UsageCard: React.FC<UsageCardProps> = ({
       <header className="au-card__header">
         {iconSrc && <img className="au-brand" src={iconSrc} alt={iconAlt ?? `${title} logo`} />}
         <div className="au-card__heading">
-          <h2 className="au-card__title">{title}</h2>
+          <h2 className="au-card__title">
+            {href ? (
+              <a href={href} target="_blank" rel="noreferrer">
+                {title}
+              </a>
+            ) : (
+              title
+            )}
+          </h2>
           {subtitle && <p className="au-card__subtitle">{subtitle}</p>}
         </div>
         {aside}

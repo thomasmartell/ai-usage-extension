@@ -42,3 +42,11 @@ export const requestGithubSaveToken = (token: string, orgs: string[]): Promise<U
 /** Forget the stored GitHub token and its usage snapshot. */
 export const requestGithubSignOut = (): Promise<UsageState> =>
   sendToBackground<UsageState>({ type: 'GITHUB_SIGN_OUT' });
+
+/** Store a pasted Netlify personal access token. */
+export const requestNetlifySaveToken = (token: string): Promise<UsageState> =>
+  sendToBackground<UsageState>({ type: 'NETLIFY_SAVE_TOKEN', token });
+
+/** Forget the stored Netlify token and its usage snapshot. */
+export const requestNetlifySignOut = (): Promise<UsageState> =>
+  sendToBackground<UsageState>({ type: 'NETLIFY_SIGN_OUT' });

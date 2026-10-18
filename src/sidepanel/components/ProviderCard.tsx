@@ -23,6 +23,8 @@ interface ProviderCardProps {
   title: string;
   iconSrc: string;
   iconAlt: string;
+  /** The provider's own usage page, linked from the card title. */
+  href?: string;
   usage?: ProviderUsage;
   loading: boolean;
   now: number;
@@ -65,7 +67,7 @@ const leadFigure = (usage: ProviderUsage): { percent: number; caption: string } 
   if (!peak) return null;
   return {
     percent: clampPercent(peak.limit.percentage),
-    caption: 'accounts' in usage ? msg('monthShort') : '',
+    caption: 'accounts' in usage ? msg('monthShort') : 'teams' in usage ? msg('cycleShort') : '',
   };
 };
 
@@ -111,6 +113,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   title,
   iconSrc,
   iconAlt,
+  href,
   usage,
   loading,
   now,
@@ -157,6 +160,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
       subtitle={subtitle}
       iconSrc={iconSrc}
       iconAlt={iconAlt}
+      href={href}
       aside={
         lead && (
           <span className={`au-card__peak au-card__peak--${getUsageTone(lead.percent)}`}>

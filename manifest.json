@@ -14,7 +14,8 @@
     "https://chatgpt.com/*",
     "https://chat.openai.com/*",
     "https://api.github.com/*",
-    "https://github.com/login/*"
+    "https://github.com/login/*",
+    "https://api.netlify.com/*"
   ],
   "background": {
     "service_worker": "src/background/index.ts",

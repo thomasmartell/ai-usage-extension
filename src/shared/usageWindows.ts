@@ -1,8 +1,15 @@
 import { WINDOW_MS } from './constants';
 import { msg } from './i18n';
-import type { ClaudeUsage, CodexUsage, GithubUsage, ModelUsage, UsageLimit } from './types';
+import type {
+  ClaudeUsage,
+  CodexUsage,
+  GithubUsage,
+  ModelUsage,
+  NetlifyUsage,
+  UsageLimit,
+} from './types';
 
-export type ProviderUsage = ClaudeUsage | CodexUsage | GithubUsage;
+export type ProviderUsage = ClaudeUsage | CodexUsage | GithubUsage | NetlifyUsage;
 
 /**
  * Claude's two provider windows are fixed at 5h and 7d, so snapshots written
@@ -62,7 +69,7 @@ export const getUsageWindows = (usage: ProviderUsage): ModelUsage[] => {
     ];
   }
 
-  if ('accounts' in usage) {
+  if ('accounts' in usage || 'teams' in usage) {
     return usage.windows;
   }
 

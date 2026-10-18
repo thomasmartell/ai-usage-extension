@@ -220,5 +220,26 @@
   },
   "expiresLabel": {
     "message": "$1 को समाप्त"
+  },
+  "netlifyBuildMinutes": {
+    "message": "बिल्ड मिनट"
+  },
+  "netlifyBandwidth": {
+    "message": "बैंडविड्थ"
+  },
+  "emptyNetlify": {
+    "message": "बिल्ड मिनट और बैंडविड्थ देखने के लिए Netlify पर्सनल एक्सेस टोकन पेस्ट करें।"
+  },
+  "netlifyCreateToken": {
+    "message": "Netlify पर बनाएँ"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 GB"
+  },
+  "cycleShort": {
+    "message": "इस चक्र"
+  },
+  "openUsagePage": {
+    "message": "$1 उपयोग पेज खोलें"
   }
 }

@@ -1,21 +1,27 @@
 import claudeBrandAsset from '../assets/brands/claude-anthropic.jpg';
 import codexBrandAsset from '../assets/brands/codex-openai.jpg';
 import githubBrandAsset from '../assets/brands/github.svg';
+import netlifyBrandAsset from '../assets/brands/netlify.svg';
 import { msg } from '../shared/i18n';
 import { useNow } from '../shared/hooks/useNow';
 import { GithubConnect } from './components/GithubConnect';
 import { Headline } from './components/Headline';
+import { NetlifyConnect } from './components/NetlifyConnect';
 import { ProviderCard } from './components/ProviderCard';
 import { useGithubAuth } from './hooks/useGithubAuth';
+import { useNetlifyAuth } from './hooks/useNetlifyAuth';
 import { useUsageData } from './hooks/useUsageData';
 import './styles/global.css';
 
 export const App = () => {
   const { usage, loading, refreshing, error, refresh } = useUsageData();
   const githubAuth = useGithubAuth();
+  const netlifyAuth = useNetlifyAuth();
   const now = useNow(30_000);
 
-  const initialLoading = loading && !usage.claude && !usage.codex && !usage.github;
+  const initialLoading =
+    loading && !usage.claude && !usage.codex && !usage.github && !usage.netlify;
+  const netlifyTeams = usage.netlify?.teams ?? [];
 
   return (
     <main className="au-shell">
@@ -53,6 +59,7 @@ export const App = () => {
       <div className="au-cards">
         <ProviderCard
           title="Claude"
+          href="https://claude.ai/settings/usage"
           iconSrc={claudeBrandAsset}
           iconAlt="Claude by Anthropic"
           usage={usage.claude}
@@ -60,17 +67,36 @@ export const App = () => {
           now={now}
           emptyHint={msg('emptyClaude')}
         />
-        <ProviderCard
-          title="Codex"
-          iconSrc={codexBrandAsset}
-          iconAlt="OpenAI"
-          usage={usage.codex}
-          loading={initialLoading}
-          now={now}
-          emptyHint={msg('emptyCodex')}
-        />
+        <div className="au-column">
+          <ProviderCard
+            title="Codex"
+            href="https://chatgpt.com/codex/settings/usage"
+            iconSrc={codexBrandAsset}
+            iconAlt="OpenAI"
+            usage={usage.codex}
+            loading={initialLoading}
+            now={now}
+            emptyHint={msg('emptyCodex')}
+          />
+          <ProviderCard
+            title="Netlify"
+            href={
+              netlifyTeams.length === 1
+                ? `https://app.netlify.com/teams/${netlifyTeams[0].slug}/usage`
+                : 'https://app.netlify.com'
+            }
+            iconSrc={netlifyBrandAsset}
+            iconAlt="Netlify"
+            usage={usage.netlify}
+            loading={initialLoading}
+            now={now}
+            emptyHint={msg('emptyNetlify')}
+            footer={<NetlifyConnect auth={netlifyAuth} />}
+          />
+        </div>
         <ProviderCard
           title="GitHub"
+          href="https://github.com/settings/billing/usage"
           iconSrc={githubBrandAsset}
           iconAlt="GitHub"
           usage={usage.github}

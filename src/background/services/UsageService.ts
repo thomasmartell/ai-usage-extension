@@ -11,6 +11,7 @@ import {
 } from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
 import { GithubService } from './GithubService';
+import { NetlifyService } from './NetlifyService';
 
 const ENDPOINTS = {
   claudeOrgs: 'https://claude.ai/api/organizations',
@@ -471,6 +472,9 @@ const historySamples = (state: UsageState): Array<[string, number]> => {
   for (const window of state.github?.windows ?? []) {
     samples.push([`github:${window.id}`, window.limit.percentage]);
   }
+  for (const window of state.netlify?.windows ?? []) {
+    samples.push([`netlify:${window.id}`, window.limit.percentage]);
+  }
   return samples;
 };
 
@@ -487,10 +491,11 @@ export class UsageService {
   }
 
   static async refreshAllUsage(): Promise<UsageState> {
-    const [claude, codex, github] = await Promise.all([
+    const [claude, codex, github, netlify] = await Promise.all([
       this.fetchClaudeUsage().catch(() => null),
       this.fetchCodexUsage().catch(() => null),
       GithubService.fetchUsage().catch(() => null),
+      NetlifyService.fetchUsage().catch(() => null),
     ]);
 
     const next = await this.getUsageState();
@@ -500,6 +505,11 @@ export class UsageService {
       next.github = github;
     } else if (!(await GithubService.isSignedIn())) {
       delete next.github;
+    }
+    if (netlify) {
+      next.netlify = netlify;
+    } else if (!(await NetlifyService.isSignedIn())) {
+      delete next.netlify;
     }
 
     await this.saveUsageState(next);

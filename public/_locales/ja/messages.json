@@ -220,5 +220,26 @@
   },
   "expiresLabel": {
     "message": "$1 に失効"
+  },
+  "netlifyBuildMinutes": {
+    "message": "ビルド時間（分）"
+  },
+  "netlifyBandwidth": {
+    "message": "帯域幅"
+  },
+  "emptyNetlify": {
+    "message": "Netlify の個人アクセストークンを貼り付けると、ビルド時間と帯域幅が表示されます。"
+  },
+  "netlifyCreateToken": {
+    "message": "Netlify で作成"
+  },
+  "unitGigabytes": {
+    "message": "$1 / $2 GB"
+  },
+  "cycleShort": {
+    "message": "今期"
+  },
+  "openUsagePage": {
+    "message": "$1 の使用状況ページを開く"
   }
 }

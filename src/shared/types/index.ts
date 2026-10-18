@@ -1,6 +1,6 @@
 export type UsageStatus = 'ok' | 'warning' | 'critical';
 
-export type ProviderId = 'claude' | 'codex' | 'github';
+export type ProviderId = 'claude' | 'codex' | 'github' | 'netlify';
 
 export interface UsageLimit {
   percentage: number;
@@ -10,7 +10,7 @@ export interface UsageLimit {
   /** Length of the rolling window in ms, when the provider reports one. */
   windowMs?: number;
   /** What `used` and `limit` count; absent means a plain request count. */
-  unit?: 'minutes' | 'usd';
+  unit?: 'minutes' | 'usd' | 'gb';
 }
 
 export interface ModelUsage {
@@ -86,6 +86,15 @@ export interface GithubUsage {
   lastUpdated: number;
 }
 
+export interface NetlifyUsage {
+  teams: Array<{ slug: string; name: string; plan: string | null }>;
+  /** Build-minute and bandwidth rows for the current billing cycle. */
+  windows: ModelUsage[];
+  models: ModelUsage[];
+  status: UsageStatus;
+  lastUpdated: number;
+}
+
 /** A device-flow sign-in waiting for the user to enter its code on github.com. */
 export interface GithubDeviceFlow {
   userCode: string;
@@ -100,6 +109,7 @@ export interface UsageState {
   claude?: ClaudeUsage;
   codex?: CodexUsage;
   github?: GithubUsage;
+  netlify?: NetlifyUsage;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -111,7 +121,9 @@ export type ExtensionMessage =
   | { type: 'REFRESH_USAGE' }
   | { type: 'GITHUB_SIGN_IN' }
   | { type: 'GITHUB_SAVE_TOKEN'; token: string; orgs: string[] }
-  | { type: 'GITHUB_SIGN_OUT' };
+  | { type: 'GITHUB_SIGN_OUT' }
+  | { type: 'NETLIFY_SAVE_TOKEN'; token: string }
+  | { type: 'NETLIFY_SIGN_OUT' };
 
 /** Response returned by the background worker for a given message. */
 export type MessageResponse<T = unknown> =

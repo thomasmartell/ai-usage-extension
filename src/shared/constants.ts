@@ -20,6 +20,8 @@ export const STORAGE_KEYS = {
   githubToken: 'github_token',
   /** Organization logins saved with a pasted token, which cannot list them. */
   githubOrgs: 'github_orgs',
+  /** Netlify personal access token pasted into the popup. */
+  netlifyToken: 'netlify_token',
   /** Device-flow sign-in in progress (`GithubDeviceFlow`), shown by the popup. */
   githubDeviceFlow: 'github_device_flow',
 } as const;
