@@ -19,6 +19,8 @@ export interface ModelUsage {
   limit: UsageLimit;
   /** Reset of a sibling window folded into this row (see `groupQuietModels`). */
   secondaryResetsAt?: string | null;
+  /** Heading the row sits under, e.g. the GitHub account it belongs to. */
+  group?: string;
 }
 
 /** A usage-limit reset credit the provider has granted and not yet spent. */
@@ -75,6 +77,11 @@ export interface GithubUsage {
   /** Monthly allowance and budget rows across every readable account. */
   windows: ModelUsage[];
   models: ModelUsage[];
+  /**
+   * Accounts the token could not read, with the HTTP status and the scopes
+   * GitHub said the endpoint accepts (`X-Accepted-OAuth-Scopes`).
+   */
+  unreadable?: Array<{ login: string; status: number; acceptedScopes?: string }>;
   status: UsageStatus;
   lastUpdated: number;
 }
@@ -103,6 +110,7 @@ export interface UsageState {
 export type ExtensionMessage =
   | { type: 'REFRESH_USAGE' }
   | { type: 'GITHUB_SIGN_IN' }
+  | { type: 'GITHUB_SAVE_TOKEN'; token: string; orgs: string[] }
   | { type: 'GITHUB_SIGN_OUT' };
 
 /** Response returned by the background worker for a given message. */

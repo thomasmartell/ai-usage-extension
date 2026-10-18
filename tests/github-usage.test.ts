@@ -51,7 +51,8 @@ describe('GitHub billing rows', () => {
     assert.equal(minutes.limit.unit, 'minutes');
     assert.equal(minutes.limit.resetsAt, '2026-11-01T00:00:00.000Z');
     assert.equal(minutes.limit.windowMs, 31 * 24 * 60 * 60 * 1000);
-    assert.equal(minutes.label, 'acme · Actions minutes');
+    assert.equal(minutes.label, 'Actions minutes');
+    assert.equal(minutes.group, 'acme');
   });
 
   it('meters spend against each non-zero budget and skips zero caps', () => {
@@ -62,9 +63,9 @@ describe('GitHub billing rows', () => {
     assert.deepEqual(
       rows.map((row) => [row.label, row.limit.used, row.limit.limit, row.limit.percentage]),
       [
-        ['acme · Actions minutes', 18483, 50000, 37],
-        ['acme · Actions budget', 0, 50, 0],
-        ['acme · AI credits budget', 4.26, 50, 9],
+        ['Actions minutes', 18483, 50000, 37],
+        ['Actions budget', 0, 50, 0],
+        ['AI credits budget', 4.26, 50, 9],
       ],
     );
     assert.equal(rows[1].limit.unit, 'usd');
@@ -110,7 +111,10 @@ describe('GitHub usage request', () => {
         local: {
           get: async (keys: string | string[]) =>
             Object.fromEntries(
-              [keys].flat().filter((key) => key in store).map((key) => [key, store[key]]),
+              [keys]
+                .flat()
+                .filter((key) => key in store)
+                .map((key) => [key, store[key]]),
             ),
           set: async (items: Record<string, unknown>) => void Object.assign(store, items),
           remove: async (keys: string | string[]) => {
@@ -133,8 +137,14 @@ describe('GitHub usage request', () => {
       requests.push(url);
       assert.equal(new Headers(init.headers).get('Authorization'), 'Bearer test-token');
       const path = url.replace('https://api.github.com', '');
-      if (path === '/user') return Response.json({ login: 'octo', plan: { name: 'pro' } });
-      if (path.startsWith('/user/orgs')) return Response.json([{ login: 'acme' }, { login: 'other' }]);
+      if (path === '/user') {
+        return Response.json(
+          { login: 'octo', plan: { name: 'pro' } },
+          { headers: { 'X-OAuth-Scopes': 'read:org, user' } },
+        );
+      }
+      if (path.startsWith('/user/orgs'))
+        return Response.json([{ login: 'acme' }, { login: 'other' }]);
       if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
       if (path === '/orgs/other') return Response.json({});
       if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
@@ -157,9 +167,62 @@ describe('GitHub usage request', () => {
     );
     assert.deepEqual(
       usage.windows.map((row) => row.id),
-      ['acme:actions-minutes', 'acme:budget:actions', 'acme:budget:ai_credits', 'octo:actions-minutes'],
+      [
+        'acme:actions-minutes',
+        'acme:budget:actions',
+        'acme:budget:ai_credits',
+        'octo:actions-minutes',
+      ],
     );
     assert.ok(!requests.some((url) => url.includes('/users/octo/settings/billing/budgets')));
+    assert.deepEqual(usage.unreadable, [{ login: 'other', status: 403 }]);
+  });
+
+  it('reads orgs saved with a fine-grained token, which cannot list them', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      // Fine-grained tokens always get an empty org list.
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path === '/organizations/acme/settings/billing/budgets') return Response.json(budgets);
+      // An org-owned token cannot read the personal report.
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.ok(usage);
+    assert.deepEqual(
+      usage.accounts.map((account) => account.login),
+      ['acme'],
+    );
+    assert.equal(usage.windows[0].limit.used, 18483);
+    // The personal account failing is expected with an org token, so it is not reported.
+    assert.deepEqual(usage.unreadable, []);
+  });
+
+  it('saves a pasted token only after GitHub accepts it', async () => {
+    store = {};
+    mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) =>
+      new Headers(init.headers).get('Authorization') === 'Bearer good-token'
+        ? Response.json({ login: 'octo' })
+        : new Response('{}', { status: 401 }),
+    );
+
+    await assert.rejects(GithubService.saveToken('bad-token', ['acme']), /token_rejected/);
+    assert.equal(store.github_token, undefined);
+
+    await GithubService.saveToken('  good-token ', [' acme ', '']);
+    assert.equal(store.github_token, 'good-token');
+    assert.deepEqual(store.github_orgs, ['acme']);
+
+    await GithubService.signOut();
+    assert.equal(store.github_token, undefined);
+    assert.equal(store.github_orgs, undefined);
   });
 
   it('signs out when GitHub rejects the stored token', async () => {

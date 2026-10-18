@@ -55,8 +55,10 @@ the legacy domain see the same experience.
 Optional GitHub tracking. After the user signs in, the extension reads their
 own monthly billing usage (`/users/{login}/settings/billing/usage/summary`),
 the organizations they belong to, and, for organizations they administer, the
-billing usage summary and budgets. Requests carry the token the user granted;
-nothing is written to GitHub.
+billing usage summary and budgets. Requests carry the token the user granted
+(device sign-in asks for `read:org` and `user`; for organizations the user can
+instead paste a fine-grained token with read-only Administration access). The
+extension only ever sends GET requests to this host.
 
 ## host: https://github.com/login/*
 

@@ -26,9 +26,6 @@
   "refreshFailed": {
     "message": "Error al actualizar"
   },
-  "overlayToggleLabel": {
-    "message": "Superposiciones en página"
-  },
   "availableResetsLabel": {
     "message": "Reinicios disponibles · $1"
   },
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "a este ritmo: límite ~$1 antes del reinicio"
   },
-  "settingsLabel": {
-    "message": "Ajustes"
-  },
   "nextResetLabel": {
     "message": "se reinicia $1"
   },
@@ -147,10 +141,10 @@
     "message": "Inicia sesión para ver los minutos de Actions y el gasto de presupuesto de tu cuenta y organizaciones."
   },
   "githubActionsMinutes": {
-    "message": "$1 · Minutos de Actions"
+    "message": "Minutos de Actions"
   },
   "githubBudget": {
-    "message": "$1 · Presupuesto de $2"
+    "message": "Presupuesto de $1"
   },
   "githubSignIn": {
     "message": "Iniciar sesión con GitHub"
@@ -181,5 +175,26 @@
   },
   "unitMinutes": {
     "message": "$1 / $2 min"
+  },
+  "githubUnreadable": {
+    "message": "No se puede leer la facturación de $1 (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "Usar un token"
+  },
+  "githubTokenHint": {
+    "message": "Token detallado de la organización con acceso de solo lectura a Administration y Plan."
+  },
+  "githubTokenLabel": {
+    "message": "Token"
+  },
+  "githubOrgLabel": {
+    "message": "Organización"
+  },
+  "githubSaveToken": {
+    "message": "Guardar token"
+  },
+  "githubCreateToken": {
+    "message": "Crear uno en GitHub"
   }
 }

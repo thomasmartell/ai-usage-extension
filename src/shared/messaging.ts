@@ -35,6 +35,10 @@ export const requestUsageRefresh = (): Promise<UsageState> =>
 export const requestGithubSignIn = (): Promise<GithubDeviceFlow> =>
   sendToBackground<GithubDeviceFlow>({ type: 'GITHUB_SIGN_IN' });
 
+/** Store a pasted GitHub token and the org logins it should read. */
+export const requestGithubSaveToken = (token: string, orgs: string[]): Promise<UsageState> =>
+  sendToBackground<UsageState>({ type: 'GITHUB_SAVE_TOKEN', token, orgs });
+
 /** Forget the stored GitHub token and its usage snapshot. */
 export const requestGithubSignOut = (): Promise<UsageState> =>
   sendToBackground<UsageState>({ type: 'GITHUB_SIGN_OUT' });

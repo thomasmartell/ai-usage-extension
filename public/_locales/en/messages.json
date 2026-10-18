@@ -26,9 +26,6 @@
   "refreshFailed": {
     "message": "Refresh failed"
   },
-  "overlayToggleLabel": {
-    "message": "On-page overlays"
-  },
   "availableResetsLabel": {
     "message": "Available resets · $1"
   },
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "at this rate: limit ~$1 before reset"
   },
-  "settingsLabel": {
-    "message": "Settings"
-  },
   "nextResetLabel": {
     "message": "resets $1"
   },
@@ -147,10 +141,10 @@
     "message": "Sign in to see Actions minutes and budget spend for your account and organizations."
   },
   "githubActionsMinutes": {
-    "message": "$1 · Actions minutes"
+    "message": "Actions minutes"
   },
   "githubBudget": {
-    "message": "$1 · $2 budget"
+    "message": "$1 budget"
   },
   "githubSignIn": {
     "message": "Sign in with GitHub"
@@ -181,5 +175,26 @@
   },
   "unitMinutes": {
     "message": "$1 / $2 min"
+  },
+  "githubUnreadable": {
+    "message": "Can’t read billing for $1 (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "Use a token instead"
+  },
+  "githubTokenHint": {
+    "message": "Fine-grained token owned by the organization, with read-only Administration and Plan access."
+  },
+  "githubTokenLabel": {
+    "message": "Token"
+  },
+  "githubOrgLabel": {
+    "message": "Organization"
+  },
+  "githubSaveToken": {
+    "message": "Save token"
+  },
+  "githubCreateToken": {
+    "message": "Create one on GitHub"
   }
 }

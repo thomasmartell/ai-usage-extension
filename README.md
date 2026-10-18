@@ -18,6 +18,11 @@ badge.
   each organization budget, for your account and every organization whose billing
   you can read. The allowance comes from the plan (Free 2,000, Pro and Team 3,000,
   Enterprise 50,000 minutes), since GitHub's billing API does not report it.
+  Sign-in asks for `read:org` and `user`, which covers your personal billing.
+  GitHub's org billing endpoints only accept `admin:org` from an OAuth token, so
+  for an organization choose **Use a token instead** and paste a fine-grained
+  token owned by the organization with read-only **Administration** and **Plan**
+  access, plus the organization's login (fine-grained tokens cannot list orgs).
 - **Toolbar badge** showing your highest current usage at a glance.
 - **On-page overlay** on `claude.ai` — a collapsible capsule rendered in a Shadow DOM,
   so it never clashes with the host page's styles.

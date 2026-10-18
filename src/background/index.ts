@@ -86,6 +86,12 @@ chrome.runtime.onMessage.addListener(
           sendResponse,
           'sign_in_failed',
         );
+      case 'GITHUB_SAVE_TOKEN':
+        return respond(
+          GithubService.saveToken(message.token, message.orgs).then(refreshUsage),
+          sendResponse,
+          'token_rejected',
+        );
       case 'GITHUB_SIGN_OUT':
         return respond(signOutOfGithub(), sendResponse, 'sign_out_failed');
       default:

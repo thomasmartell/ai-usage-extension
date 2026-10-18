@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { STORAGE_KEYS } from '../../shared/constants';
-import { requestGithubSignIn, requestGithubSignOut } from '../../shared/messaging';
+import {
+  requestGithubSaveToken,
+  requestGithubSignIn,
+  requestGithubSignOut,
+} from '../../shared/messaging';
 import type { GithubDeviceFlow } from '../../shared/types';
 
 export interface GithubAuth {
@@ -10,6 +14,7 @@ export interface GithubAuth {
   starting: boolean;
   error: string | null;
   signIn: () => Promise<void>;
+  saveToken: (token: string, orgs: string[]) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -65,10 +70,22 @@ export const useGithubAuth = (): GithubAuth => {
     }
   }, []);
 
+  const saveToken = useCallback(async (token: string, orgs: string[]): Promise<void> => {
+    setStarting(true);
+    setError(null);
+    try {
+      await requestGithubSaveToken(token, orgs);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'token_rejected');
+    } finally {
+      setStarting(false);
+    }
+  }, []);
+
   const signOut = useCallback(async (): Promise<void> => {
     setError(null);
     await requestGithubSignOut();
   }, []);
 
-  return { signedIn, deviceFlow, starting, error, signIn, signOut };
+  return { signedIn, deviceFlow, starting, error, signIn, saveToken, signOut };
 };

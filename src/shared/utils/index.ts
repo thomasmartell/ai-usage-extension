@@ -109,7 +109,11 @@ export const formatRelativeTime = (timestamp: number, now: number): string => {
 /** `used / limit` in the limit's unit, e.g. `18,249 / 50,000 min` or `$12.40 / $50.00`. */
 export const formatCount = ({ used = 0, limit = 0, unit }: UsageLimit): string => {
   if (unit === 'usd') {
-    const usd = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
+    const usd = new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: 'USD',
+      currencyDisplay: 'narrowSymbol',
+    });
     return `${usd.format(used)} / ${usd.format(limit)}`;
   }
 

@@ -26,9 +26,6 @@
   "refreshFailed": {
     "message": "更新に失敗しました"
   },
-  "overlayToggleLabel": {
-    "message": "ページ内オーバーレイ"
-  },
   "availableResetsLabel": {
     "message": "利用可能なリセット回数 · $1"
   },
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "このペースでは: リセットの約$1前に上限"
   },
-  "settingsLabel": {
-    "message": "設定"
-  },
   "nextResetLabel": {
     "message": "リセット $1"
   },
@@ -147,10 +141,10 @@
     "message": "サインインすると、アカウントと組織の Actions 分数と予算の使用額が表示されます。"
   },
   "githubActionsMinutes": {
-    "message": "$1 · Actions 分数"
+    "message": "Actions 分数"
   },
   "githubBudget": {
-    "message": "$1 · $2 予算"
+    "message": "$1 予算"
   },
   "githubSignIn": {
     "message": "GitHub でサインイン"
@@ -181,5 +175,26 @@
   },
   "unitMinutes": {
     "message": "$1 / $2 分"
+  },
+  "githubUnreadable": {
+    "message": "$1 の請求データを読み取れません (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "代わりにトークンを使う"
+  },
+  "githubTokenHint": {
+    "message": "組織が所有する Fine-grained トークン（Administration と Plan は読み取り専用）。"
+  },
+  "githubTokenLabel": {
+    "message": "トークン"
+  },
+  "githubOrgLabel": {
+    "message": "組織"
+  },
+  "githubSaveToken": {
+    "message": "トークンを保存"
+  },
+  "githubCreateToken": {
+    "message": "GitHub で作成"
   }
 }

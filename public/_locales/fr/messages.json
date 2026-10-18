@@ -26,9 +26,6 @@
   "refreshFailed": {
     "message": "Échec de l’actualisation"
   },
-  "overlayToggleLabel": {
-    "message": "Overlays sur la page"
-  },
   "availableResetsLabel": {
     "message": "Réinitialisations disponibles · $1"
   },
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "à ce rythme : limite ~$1 avant la réinitialisation"
   },
-  "settingsLabel": {
-    "message": "Paramètres"
-  },
   "nextResetLabel": {
     "message": "réinitialisation $1"
   },
@@ -147,10 +141,10 @@
     "message": "Connectez-vous pour voir les minutes Actions et les dépenses budgétaires de votre compte et de vos organisations."
   },
   "githubActionsMinutes": {
-    "message": "$1 · Minutes Actions"
+    "message": "Minutes Actions"
   },
   "githubBudget": {
-    "message": "$1 · Budget $2"
+    "message": "Budget $1"
   },
   "githubSignIn": {
     "message": "Se connecter avec GitHub"
@@ -181,5 +175,26 @@
   },
   "unitMinutes": {
     "message": "$1 / $2 min"
+  },
+  "githubUnreadable": {
+    "message": "Impossible de lire la facturation de $1 (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "Utiliser un jeton"
+  },
+  "githubTokenHint": {
+    "message": "Jeton à granularité fine de l’organisation, avec accès en lecture seule à Administration et Plan."
+  },
+  "githubTokenLabel": {
+    "message": "Jeton"
+  },
+  "githubOrgLabel": {
+    "message": "Organisation"
+  },
+  "githubSaveToken": {
+    "message": "Enregistrer le jeton"
+  },
+  "githubCreateToken": {
+    "message": "En créer un sur GitHub"
   }
 }

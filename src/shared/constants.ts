@@ -18,10 +18,10 @@ export const STORAGE_KEYS = {
   codexOverlayCollapsed: 'codex_overlay_collapsed',
   /** OAuth token from GitHub's device flow; read only by the background worker. */
   githubToken: 'github_token',
+  /** Organization logins saved with a pasted token, which cannot list them. */
+  githubOrgs: 'github_orgs',
   /** Device-flow sign-in in progress (`GithubDeviceFlow`), shown by the popup. */
   githubDeviceFlow: 'github_device_flow',
-  /** Whether the sidepanel's settings section is expanded. */
-  settingsExpanded: 'settings_expanded',
 } as const;
 
 /** Name of the recurring alarm that refreshes usage in the background. */
@@ -48,6 +48,11 @@ export const USAGE_THRESHOLDS = {
  */
 export const GITHUB_OAUTH = {
   clientId: 'Ov23litw7j2JC0ecJHVP',
-  /** `user` reads the personal billing report; `read:org` lists the orgs to check. */
+  /**
+   * `user` reads the personal billing report; `read:org` lists the orgs to
+   * check. Org billing endpoints accept only `admin:org` or `repo` from an
+   * OAuth token, so org billing is read with a pasted fine-grained token
+   * (read-only Administration) instead of asking for admin rights here.
+   */
   scopes: 'read:org user',
 } as const;

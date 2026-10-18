@@ -26,9 +26,6 @@
   "refreshFailed": {
     "message": "अपडेट विफल रहा"
   },
-  "overlayToggleLabel": {
-    "message": "पेज ओवरले"
-  },
   "availableResetsLabel": {
     "message": "उपलब्ध रीसेट · $1"
   },
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "इस दर पर: रीसेट से ~$1 पहले सीमा"
   },
-  "settingsLabel": {
-    "message": "सेटिंग्स"
-  },
   "nextResetLabel": {
     "message": "$1 में रीसेट"
   },
@@ -147,10 +141,10 @@
     "message": "अपने खाते और संगठनों के Actions मिनट और बजट खर्च देखने के लिए साइन इन करें।"
   },
   "githubActionsMinutes": {
-    "message": "$1 · Actions मिनट"
+    "message": "Actions मिनट"
   },
   "githubBudget": {
-    "message": "$1 · $2 बजट"
+    "message": "$1 बजट"
   },
   "githubSignIn": {
     "message": "GitHub से साइन इन करें"
@@ -181,5 +175,26 @@
   },
   "unitMinutes": {
     "message": "$1 / $2 मिनट"
+  },
+  "githubUnreadable": {
+    "message": "$1 का बिलिंग डेटा नहीं पढ़ा जा सका (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "इसके बजाय टोकन उपयोग करें"
+  },
+  "githubTokenHint": {
+    "message": "संगठन का फ़ाइन-ग्रेन्ड टोकन, Administration और Plan के लिए केवल-पढ़ने की पहुँच के साथ।"
+  },
+  "githubTokenLabel": {
+    "message": "टोकन"
+  },
+  "githubOrgLabel": {
+    "message": "संगठन"
+  },
+  "githubSaveToken": {
+    "message": "टोकन सहेजें"
+  },
+  "githubCreateToken": {
+    "message": "GitHub पर बनाएँ"
   }
 }

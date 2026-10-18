@@ -65,14 +65,18 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
         <Skeleton />
       ) : usage ? (
         <>
-          {rows.map((row) => (
-            <UsageMetric
-              key={row.id}
-              label={row.label}
-              limit={row.limit}
-              secondaryResetsAt={row.secondaryResetsAt}
-              now={now}
-            />
+          {rows.map((row, index) => (
+            <React.Fragment key={row.id}>
+              {row.group && row.group !== rows[index - 1]?.group && (
+                <p className="au-group">{row.group}</p>
+              )}
+              <UsageMetric
+                label={row.label}
+                limit={row.limit}
+                secondaryResetsAt={row.secondaryResetsAt}
+                now={now}
+              />
+            </React.Fragment>
           ))}
           {'plan' in usage && usage.plan !== 'unknown' && (
             <p className="au-footnote">{msg('planLabel', usage.plan)}</p>

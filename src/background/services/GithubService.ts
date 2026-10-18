@@ -120,7 +120,8 @@ export const buildAccountRows = (
     );
     rows.push({
       id: `${account.login}:actions-minutes`,
-      label: msg('githubActionsMinutes', account.login),
+      label: msg('githubActionsMinutes'),
+      group: account.login,
       limit: {
         ...window,
         percentage: clampPercent((used / included) * 100),
@@ -140,7 +141,8 @@ export const buildAccountRows = (
     );
     rows.push({
       id: `${account.login}:budget:${budget.sku}`,
-      label: msg('githubBudget', [account.login, BUDGET_PRODUCTS[budget.sku] ?? budget.sku]),
+      label: msg('githubBudget', BUDGET_PRODUCTS[budget.sku] ?? budget.sku),
+      group: account.login,
       limit: {
         ...window,
         percentage: clampPercent((spent / budget.amount) * 100),
@@ -158,6 +160,7 @@ export const buildGithubUsage = (
   viewer: string,
   billing: AccountBilling[],
   now: number,
+  unreadable: GithubUsage['unreadable'] = [],
 ): GithubUsage => {
   // Organizations first: that is where shared CI usually bills.
   const ordered = [...billing].sort(
@@ -171,6 +174,7 @@ export const buildGithubUsage = (
     accounts: ordered.map((entry) => entry.account),
     windows,
     models: [],
+    unreadable,
     status: getUsageTone(highest),
     lastUpdated: now,
   };
@@ -178,7 +182,11 @@ export const buildGithubUsage = (
 
 /* -------------------- HTTP -------------------- */
 
-type ApiResult = { ok: true; data: unknown } | { ok: false; status: number };
+type ApiResult =
+  | { ok: true; data: unknown }
+  | { ok: false; status: number; acceptedScopes?: string };
+
+type Unreadable = NonNullable<GithubUsage['unreadable']>[number];
 
 const githubGet = async (path: string, token: string): Promise<ApiResult> => {
   const response = await fetch(`${API}${path}`, {
@@ -189,7 +197,10 @@ const githubGet = async (path: string, token: string): Promise<ApiResult> => {
       'X-GitHub-Api-Version': '2022-11-28',
     },
   });
-  if (!response.ok) return { ok: false, status: response.status };
+  if (!response.ok) {
+    const acceptedScopes = response.headers.get('X-Accepted-OAuth-Scopes') ?? undefined;
+    return { ok: false, status: response.status, ...(acceptedScopes ? { acceptedScopes } : {}) };
+  }
   return { ok: true, data: (await response.json()) as unknown };
 };
 
@@ -210,17 +221,23 @@ const readToken = async (): Promise<string | null> => {
   return readString(stored[STORAGE_KEYS.githubToken]);
 };
 
+const readSavedOrgs = async (): Promise<string[]> => {
+  const stored = await chrome.storage.local.get(STORAGE_KEYS.githubOrgs);
+  const orgs = stored[STORAGE_KEYS.githubOrgs];
+  return Array.isArray(orgs) ? orgs.filter((org): org is string => typeof org === 'string') : [];
+};
+
 const planName = (data: unknown): string | null =>
   isObject(data) && isObject(data.plan)
     ? (readString(data.plan.name)?.toLowerCase() ?? null)
     : null;
 
-/** Billing for one account, or `null` when the token cannot read it. */
+/** Billing for one account, or why the token cannot read it. */
 const fetchAccountBilling = async (
   account: GithubAccount,
   token: string,
   now: number,
-): Promise<AccountBilling | null> => {
+): Promise<AccountBilling | Unreadable> => {
   const { year, month } = billingMonth(now);
   const base =
     account.kind === 'user'
@@ -228,7 +245,10 @@ const fetchAccountBilling = async (
       : `/organizations/${account.login}/settings/billing`;
 
   const summary = await githubGet(`${base}/usage/summary?year=${year}&month=${month}`, token);
-  if (!summary.ok) return null;
+  if (!summary.ok) {
+    const { status, acceptedScopes } = summary;
+    return { login: account.login, status, ...(acceptedScopes ? { acceptedScopes } : {}) };
+  }
 
   // Budgets are only exposed for organizations.
   const budgets =
@@ -261,13 +281,18 @@ export class GithubService {
     const login = isObject(user.data) ? readString(user.data.login) : null;
     if (!login) return null;
 
+    const unreadable: Unreadable[] = [];
     const orgs = await githubGet('/user/orgs?per_page=100', token);
-    const orgLogins =
+    if (!orgs.ok) unreadable.push({ login: 'organizations', status: orgs.status });
+    const listedOrgs =
       orgs.ok && Array.isArray(orgs.data)
         ? orgs.data.flatMap((org) =>
             isObject(org) && readString(org.login) ? [String(org.login)] : [],
           )
         : [];
+    // Fine-grained tokens always get an empty org list, so the orgs saved
+    // alongside a pasted token are checked too.
+    const orgLogins = [...new Set([...listedOrgs, ...(await readSavedOrgs())])];
 
     const orgAccounts = await Promise.all(
       orgLogins.map(async (org): Promise<GithubAccount> => {
@@ -285,15 +310,26 @@ export class GithubService {
       ...orgAccounts,
     ];
 
-    const billing = await Promise.all(
-      accounts.map((account) => fetchAccountBilling(account, token, now).catch(() => null)),
+    const results = await Promise.all(
+      accounts.map((account) =>
+        fetchAccountBilling(account, token, now).catch(
+          (): Unreadable => ({ login: account.login, status: 0 }),
+        ),
+      ),
     );
 
-    return buildGithubUsage(
-      login,
-      billing.filter((entry): entry is AccountBilling => entry !== null),
-      now,
-    );
+    const billing: AccountBilling[] = [];
+    for (const result of results) {
+      if ('account' in result) {
+        billing.push(result);
+      } else if (result.login !== login) {
+        // An org-owned fine-grained token cannot read the personal report,
+        // which is expected, so only unreadable orgs are reported.
+        unreadable.push(result);
+      }
+    }
+
+    return buildGithubUsage(login, billing, now, unreadable);
   }
 
   /**
@@ -331,8 +367,29 @@ export class GithubService {
     return flow;
   }
 
+  /**
+   * Store a pasted token (typically fine-grained, with read-only org
+   * Administration access) after checking GitHub accepts it. `orgs` are the
+   * organization logins to read, since fine-grained tokens cannot list them.
+   */
+  static async saveToken(token: string, orgs: string[]): Promise<void> {
+    const trimmed = token.trim();
+    const user = trimmed ? await githubGet('/user', trimmed) : null;
+    if (!user?.ok) throw new Error('token_rejected');
+
+    await chrome.storage.local.remove(STORAGE_KEYS.githubDeviceFlow);
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.githubToken]: trimmed,
+      [STORAGE_KEYS.githubOrgs]: orgs.map((org) => org.trim()).filter(Boolean),
+    });
+  }
+
   static async signOut(): Promise<void> {
-    await chrome.storage.local.remove([STORAGE_KEYS.githubToken, STORAGE_KEYS.githubDeviceFlow]);
+    await chrome.storage.local.remove([
+      STORAGE_KEYS.githubToken,
+      STORAGE_KEYS.githubOrgs,
+      STORAGE_KEYS.githubDeviceFlow,
+    ]);
   }
 
   /** Resolves `true` once a token is stored, `false` if the flow ended without one. */

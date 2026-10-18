@@ -26,9 +26,6 @@
   "refreshFailed": {
     "message": "Ошибка обновления"
   },
-  "overlayToggleLabel": {
-    "message": "Оверлеи на страницах"
-  },
   "availableResetsLabel": {
     "message": "Доступно сбросов · $1"
   },
@@ -92,9 +89,6 @@
   "paceProjectionLabel": {
     "message": "при таком темпе: лимит ~$1 до сброса"
   },
-  "settingsLabel": {
-    "message": "Настройки"
-  },
   "nextResetLabel": {
     "message": "сброс $1"
   },
@@ -147,10 +141,10 @@
     "message": "Войдите, чтобы видеть минуты Actions и расходы бюджета для вашего аккаунта и организаций."
   },
   "githubActionsMinutes": {
-    "message": "$1 · Минуты Actions"
+    "message": "Минуты Actions"
   },
   "githubBudget": {
-    "message": "$1 · Бюджет $2"
+    "message": "Бюджет $1"
   },
   "githubSignIn": {
     "message": "Войти через GitHub"
@@ -181,5 +175,26 @@
   },
   "unitMinutes": {
     "message": "$1 / $2 мин"
+  },
+  "githubUnreadable": {
+    "message": "Не удаётся прочитать расходы $1 (HTTP $2)"
+  },
+  "githubUseToken": {
+    "message": "Использовать токен"
+  },
+  "githubTokenHint": {
+    "message": "Детализированный токен организации с доступом только на чтение к Administration и Plan."
+  },
+  "githubTokenLabel": {
+    "message": "Токен"
+  },
+  "githubOrgLabel": {
+    "message": "Организация"
+  },
+  "githubSaveToken": {
+    "message": "Сохранить токен"
+  },
+  "githubCreateToken": {
+    "message": "Создать на GitHub"
   }
 }
