@@ -31,7 +31,10 @@ const sectionBody = (markdown, heading) => {
   const start = lines.findIndex((l) => l.trim() === `## ${heading}`);
   if (start === -1) return '';
   const end = lines.findIndex((l, i) => i > start && l.startsWith('## '));
-  return lines.slice(start + 1, end === -1 ? undefined : end).join('\n').trim();
+  return lines
+    .slice(start + 1, end === -1 ? undefined : end)
+    .join('\n')
+    .trim();
 };
 
 const manifest = JSON.parse(read('manifest.json'));
@@ -40,7 +43,7 @@ const hostHeading = (host) => `host: ${host}`;
 
 const expectedPermissionHeadings = [
   ...(manifest.permissions ?? []),
-  ...((manifest.host_permissions ?? []).map(hostHeading)),
+  ...(manifest.host_permissions ?? []).map(hostHeading),
 ];
 
 const CHROME_SHORT_DESCRIPTION_MAX = 132;
@@ -67,10 +70,7 @@ describe('store/listing.md', () => {
 
   for (const required of requiredListingHeadings) {
     it(`has the "## ${required}" section`, () => {
-      assert.ok(
-        present.has(required),
-        `${path} must contain a "## ${required}" heading`,
-      );
+      assert.ok(present.has(required), `${path} must contain a "## ${required}" heading`);
     });
   }
 

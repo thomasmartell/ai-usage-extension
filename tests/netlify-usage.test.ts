@@ -50,6 +50,23 @@ describe('Netlify rows', () => {
     assert.equal(bandwidth.limit.unit, 'gb');
   });
 
+  it('reads minute allowances sent as numeric strings', () => {
+    const [team] = parseAccounts([{ ...account, capabilities: {} }]);
+    const [minutes] = buildAccountRows(
+      team,
+      {
+        minutes: {
+          ...buildStatus.minutes,
+          included_minutes: '25000',
+          included_minutes_with_packs: '25000',
+        },
+      },
+      true,
+    );
+    assert.equal(minutes.limit.limit, 25000);
+    assert.equal(minutes.limit.percentage, 25);
+  });
+
   it('falls back to the account capability when build status is unavailable', () => {
     const [team] = parseAccounts([account]);
     const [minutes] = buildAccountRows(team, null, false);

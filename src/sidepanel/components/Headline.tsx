@@ -9,6 +9,7 @@ const PROVIDERS = [
   ['claude', 'Claude'],
   ['codex', 'Codex'],
   ['github', 'GitHub'],
+  ['netlify', 'Netlify'],
 ] as const;
 
 interface HeadlineProps {

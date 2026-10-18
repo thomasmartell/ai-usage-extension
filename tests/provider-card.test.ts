@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { Headline } from '../src/sidepanel/components/Headline';
 import { ProviderCard } from '../src/sidepanel/components/ProviderCard';
-import type { ClaudeUsage, CodexUsage } from '../src/shared/types';
+import type { ClaudeUsage, CodexUsage, UsageState } from '../src/shared/types';
 
 const NOW = Date.parse('2026-10-15T06:00:00Z');
 
@@ -98,5 +99,38 @@ describe('ProviderCard layout', () => {
     assert.match(html, /weekly<\/span>/);
     assert.ok(html.indexOf('Weekly · 7d') < html.indexOf('Session · 5h'));
     assert.doesNotMatch(html, /Plan · Max/);
+  });
+});
+
+describe('Headline', () => {
+  it('names a Netlify limit when it is the fullest', () => {
+    const html = renderToStaticMarkup(
+      createElement(Headline, {
+        now: NOW,
+        usage: {
+          claude: {
+            windows: [{ id: 'w', label: 'Weekly', limit: { ...limit, percentage: 40 } }],
+            models: [],
+            status: 'ok',
+            lastUpdated: NOW,
+          },
+          netlify: {
+            teams: [{ slug: 'acme', name: 'Acme', plan: 'Pro' }],
+            windows: [
+              {
+                id: 'acme:build-minutes',
+                label: 'Build minutes',
+                group: 'Acme',
+                limit: { ...limit, percentage: 99 },
+              },
+            ],
+            models: [],
+            status: 'critical',
+            lastUpdated: NOW,
+          },
+        } as UsageState,
+      }),
+    );
+    assert.match(html, /Netlify Build minutes/);
   });
 });

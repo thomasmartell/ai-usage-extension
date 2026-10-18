@@ -17,6 +17,10 @@ const readNumber = (value: unknown): number | null =>
 const readString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;
 
+/** A number, or a numeric string: Netlify's API model types minute allowances as strings. */
+const readAmount = (value: unknown): number | null =>
+  readNumber(typeof value === 'string' && value.trim() !== '' ? Number(value) : value);
+
 const readDate = (value: unknown): number | null => {
   const text = readString(value);
   const time = text ? Date.parse(text) : NaN;
@@ -80,10 +84,10 @@ export const buildAccountRows = (
       : { resetsAt: null };
 
   const fallback = quota(account.capabilities, 'build_minutes');
-  const used = readNumber(minutes.current) ?? fallback?.used ?? null;
+  const used = readAmount(minutes.current) ?? fallback?.used ?? null;
   const included =
-    readNumber(minutes.included_minutes_with_packs) ||
-    readNumber(minutes.included_minutes) ||
+    readAmount(minutes.included_minutes_with_packs) ||
+    readAmount(minutes.included_minutes) ||
     fallback?.included ||
     null;
 
