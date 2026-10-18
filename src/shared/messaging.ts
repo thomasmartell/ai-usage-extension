@@ -13,8 +13,10 @@ export const readUsageState = async (): Promise<UsageState> => {
 const sendToBackground = async <T>(message: ExtensionMessage): Promise<T> => {
   const response = (await chrome.runtime.sendMessage(message)) as MessageResponse<T> | undefined;
 
+  // No listener answered: usually a worker still running an older build after
+  // an update, which knows nothing of this message until it is reloaded.
   if (!response) {
-    throw new Error('No response from the background worker');
+    throw new Error('No response from the background worker. Reload the extension and try again.');
   }
 
   if (!response.success) {
