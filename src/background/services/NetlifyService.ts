@@ -197,7 +197,8 @@ export const buildAccountRows = (
 
 /**
  * Keep a team's last credit rows when its credit lookup failed this time,
- * unless the plan cycle they belong to has ended.
+ * and a legacy team's last meters when its build status failed, unless the
+ * cycle they belong to has ended.
  */
 export const carryCredits = (next: NetlifyUsage, previous?: NetlifyUsage): NetlifyUsage => {
   // The team listing failed: keep the last snapshot whole, with its own
@@ -205,7 +206,7 @@ export const carryCredits = (next: NetlifyUsage, previous?: NetlifyUsage): Netli
   if (next.listingFailed && previous && !previous.listingFailed) {
     return { ...previous, unreadable: next.unreadable };
   }
-  const missing = new Set(next.creditsMissing);
+  const missing = new Set([...(next.creditsMissing ?? []), ...(next.statusMissing ?? [])]);
   const unconfirmed = new Set(next.creditsUnconfirmed);
   if ((missing.size === 0 && unconfirmed.size === 0) || !previous) return next;
   // Matched on the team slug that prefixes each row id: names need not be unique.
@@ -287,7 +288,6 @@ export class NetlifyService {
     const listing = await listAccounts(token);
     // A 200 that is not a team array is as unreadable as a failed request.
     if (!listing.ok || !Array.isArray(listing.data)) {
-      // A revoked or expired token: drop it so the popup asks for a new one.
       // A revoked or expired token: drop it so the popup asks for a new one,
       // unless a different token was saved while this request was waiting.
       if (!listing.ok && listing.status === 401) {
@@ -319,6 +319,7 @@ export class NetlifyService {
     const unreadable: NonNullable<NetlifyUsage['unreadable']> = [];
     const creditsMissing: string[] = [];
     const creditsUnconfirmed: string[] = [];
+    const statusMissing: string[] = [];
     const windows = accounts.flatMap((account, index) => {
       const [status, credits] = details[index];
       // A failed credit lookup is not a legacy plan: showing leftover minute
@@ -336,8 +337,12 @@ export class NetlifyService {
       // A reply without a plan-credit pool reads as a legacy plan, but a
       // credit team's garbled reply looks the same: `carryCredits` keeps the
       // team's last credit rows if it had any.
-      if (credits.ok && !creditPool(credits.data, 'plan_credits'))
-        creditsUnconfirmed.push(account.slug);
+      const legacy = !credits.ok || !creditPool(credits.data, 'plan_credits');
+      if (credits.ok && legacy) creditsUnconfirmed.push(account.slug);
+      // Legacy meters take their cycle from the build status alone (credit
+      // plans fall back on `planCycle`), so a failed lookup keeps their last rows.
+      if (legacy && (!status || (!status.ok && status.status !== 404)))
+        statusMissing.push(account.slug);
       // Always under a team heading, which also carries the cycle's reset date.
       const rows = buildAccountRows(
         account,
@@ -361,6 +366,7 @@ export class NetlifyService {
       ...(unreadable.length > 0 ? { unreadable } : {}),
       ...(creditsMissing.length > 0 ? { creditsMissing } : {}),
       ...(creditsUnconfirmed.length > 0 ? { creditsUnconfirmed } : {}),
+      ...(statusMissing.length > 0 ? { statusMissing } : {}),
       status: getUsageTone(highest),
       lastUpdated: now,
     };

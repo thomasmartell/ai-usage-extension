@@ -122,7 +122,12 @@ export const parseBudgets = (payload: unknown, org: string): GithubBudget[] => {
   });
 };
 
-/** Included-minute drawdown of a usage summary's standard hosted runner minutes. */
+/**
+ * Included-minute drawdown of a usage summary's standard hosted runner
+ * minutes. GitHub reports self-hosted runner minutes under the same SKUs and
+ * only marks them as discounted, alongside the allowance itself, so they
+ * cannot be told apart and an account using self-hosted runners reads high.
+ */
 export const actionsMinutes = (items: BillingItem[]): number =>
   items.reduce((sum, item) => sum + item.grossQuantity * (MINUTE_MULTIPLIERS[item.sku] ?? 0), 0);
 
@@ -592,7 +597,11 @@ export class GithubService {
     }
 
     const usage = buildGithubUsage(login, billing, now, unreadable);
-    const minutesMissing = [...new Set([...(usage.minutesMissing ?? []), ...plansMissing])];
+    // Only orgs whose billing was read: one denied outright has no row to keep.
+    const read = new Set(billing.map((entry) => entry.account.login));
+    const minutesMissing = [
+      ...new Set([...(usage.minutesMissing ?? []), ...plansMissing.filter((org) => read.has(org))]),
+    ];
     return {
       ...usage,
       ...(minutesMissing.length > 0 ? { minutesMissing } : {}),

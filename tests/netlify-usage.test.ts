@@ -291,6 +291,27 @@ describe('Netlify usage request', () => {
     );
   });
 
+  it('keeps a legacy team’s meters when its build status fails', async () => {
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      if (url.includes('/accounts?')) return Response.json([account]);
+      if (url.endsWith('/billing/credits')) return new Response('{}', { status: 404 });
+      return new Response('{}', { status: 503 });
+    });
+    const usage = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18, 12));
+    assert.deepEqual(usage?.statusMissing, ['acme']);
+
+    const [team] = parseAccounts([account]);
+    const previous = {
+      teams: [{ slug: 'acme', name: 'Acme team', plan: 'Pro' }],
+      windows: buildAccountRows(team, buildStatus, true, null),
+      models: [],
+      status: 'ok' as const,
+      lastUpdated: Date.UTC(2026, 9, 18, 11),
+    };
+    // The last rows, with their cycle reset, stand in for ones built without it.
+    assert.deepEqual(carryCredits(usage!, previous).windows, previous.windows);
+  });
+
   it('keeps a credit team’s rows over legacy meters from a reply without credits', async () => {
     mock.method(globalThis, 'fetch', async (url: string) => {
       if (url.includes('/accounts?')) return Response.json([account]);

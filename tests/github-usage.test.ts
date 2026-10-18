@@ -751,6 +751,27 @@ describe('GitHub usage request', () => {
     assert.equal(carryBudgets(usage!, previous).windows[0].id, 'acme:actions-minutes');
   });
 
+  it('keeps no minutes row for an org whose plan and billing are both denied', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path === '/orgs/acme') return new Response('{}', { status: 404 });
+      if (path.startsWith('/organizations/acme/')) return new Response('{}', { status: 403 });
+      return new Response('{}', { status: 404 });
+    });
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.equal(usage?.minutesMissing, undefined);
+
+    const limit = { percentage: 37, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = {
+      ...usage!,
+      windows: [{ id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit }],
+    };
+    assert.deepEqual(carryBudgets(usage!, previous).windows, []);
+  });
+
   it('treats a summary without usageItems as unreadable, not as zero usage', async () => {
     store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
     mock.method(globalThis, 'fetch', async (url: string) => {

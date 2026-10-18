@@ -108,6 +108,8 @@ export interface NetlifyUsage {
   listingFailed?: boolean;
   /** Slugs of teams whose credit reply had no plan-credit pool (legacy or garbled). */
   creditsUnconfirmed?: string[];
+  /** Slugs of legacy teams whose build-status lookup failed, so their last rows are kept. */
+  statusMissing?: string[];
   models: ModelUsage[];
   status: UsageStatus;
   lastUpdated: number;
