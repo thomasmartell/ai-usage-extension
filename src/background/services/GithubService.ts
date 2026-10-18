@@ -135,7 +135,9 @@ export const billingMonth = (
 /** Whether a usage item counts against a budget's product SKU. */
 const inBudget = (item: BillingItem, { sku, skuPricing }: GithubBudget): boolean => {
   if (skuPricing) return item.sku === sku;
-  if (sku === 'ai_credits') return item.product.toLowerCase() === 'copilot';
+  // The AI credits budget covers the usage-billed `*_ai_credit(s)` SKUs
+  // (Copilot, coding agent, code quality, Spark), not Copilot seat licences.
+  if (sku === 'ai_credits') return /_ai_(credit|unit)s?$/.test(item.sku);
   return item.product.toLowerCase().replace(/\s+/g, '_') === sku;
 };
 
@@ -311,10 +313,34 @@ const fetchAccountBilling = async (
 };
 
 /**
+ * When the org membership list came back incomplete, keep the organizations
+ * it missed (and their rows) from the last snapshot instead of dropping them.
+ */
+const carryOrgs = (next: GithubUsage, previous?: GithubUsage): GithubUsage => {
+  if (!next.orgsIncomplete || !previous) return next;
+  const known = new Set(next.accounts.map((account) => account.login));
+  const missed = previous.accounts.filter(
+    (account) => account.kind === 'organization' && !known.has(account.login),
+  );
+  if (missed.length === 0) return next;
+  const logins = new Set(missed.map((account) => account.login));
+  // Organizations lead, as in `buildGithubUsage`.
+  return {
+    ...next,
+    accounts: [...missed, ...next.accounts],
+    windows: [
+      ...previous.windows.filter((row) => row.group !== undefined && logins.has(row.group)),
+      ...next.windows,
+    ],
+  };
+};
+
+/**
  * Keep the last known budget rows for accounts whose budget listing failed
  * this time, so a passing rate limit does not make budgets vanish.
  */
 export const carryBudgets = (next: GithubUsage, previous?: GithubUsage): GithubUsage => {
+  next = carryOrgs(next, previous);
   if (!next.budgetsMissing?.length && !next.minutesMissing?.length) return next;
   // Only rows of the same billing month: an old month's figures are not current.
   const current = (row: ModelUsage) =>
@@ -451,10 +477,13 @@ export class GithubService {
 
     const unreadable: Unreadable[] = [];
     const listedOrgs: string[] = [];
+    let orgsIncomplete = false;
     for (let page = 1; page <= REPO_PAGE_LIMIT; page += 1) {
       const orgs = await githubGet(`/user/orgs?per_page=100&page=${page}`, token);
       if (!orgs.ok || !Array.isArray(orgs.data)) {
-        if (!orgs.ok) unreadable.push({ login: 'organizations', status: orgs.status });
+        // An incomplete list: orgs it missed keep their last rows (`carryBudgets`).
+        unreadable.push({ login: 'organizations', status: orgs.ok ? 200 : orgs.status });
+        orgsIncomplete = true;
         break;
       }
       listedOrgs.push(
@@ -503,7 +532,8 @@ export class GithubService {
       }
     }
 
-    return buildGithubUsage(login, billing, now, unreadable);
+    const usage = buildGithubUsage(login, billing, now, unreadable);
+    return orgsIncomplete ? { ...usage, orgsIncomplete } : usage;
   }
 
   /**

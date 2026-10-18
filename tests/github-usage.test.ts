@@ -183,6 +183,55 @@ describe('GitHub billing rows', () => {
   });
 });
 
+describe('AI credits budget', () => {
+  it('counts AI-credit SKUs, not Copilot seat licences', () => {
+    const [aiCredits] = buildAccountRows(
+      {
+        account: { login: 'acme', kind: 'organization', plan: 'enterprise' },
+        items: [
+          { product: 'Copilot', sku: 'copilot_ai_credit', grossQuantity: 1, netAmount: 4 },
+          { product: 'Copilot', sku: 'coding_agent_ai_credit', grossQuantity: 1, netAmount: 1 },
+          { product: 'Copilot', sku: 'copilot_for_business', grossQuantity: 1, netAmount: 19 },
+          { product: 'Copilot', sku: 'copilot_enterprise', grossQuantity: 1, netAmount: 39 },
+        ],
+        budgets: [{ sku: 'ai_credits', amount: 50 }],
+      },
+      NOW,
+    ).filter((row) => row.id === 'acme:budget:ai_credits');
+    assert.equal(aiCredits.limit.used, 5);
+  });
+});
+
+describe('Org carry-over', () => {
+  it('keeps orgs an incomplete membership list missed', () => {
+    const limit = { percentage: 10, resetsAt: '2026-11-01T00:00:00Z' };
+    const previous = buildGithubUsage('octo', [], NOW);
+    previous.accounts = [
+      { login: 'acme', kind: 'organization', plan: 'enterprise' },
+      { login: 'octo', kind: 'user', plan: 'pro' },
+    ];
+    previous.windows = [
+      { id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit },
+      { id: 'octo:actions-minutes', label: 'Actions minutes', group: 'octo', limit },
+    ];
+    const next = {
+      ...previous,
+      accounts: [previous.accounts[1]],
+      windows: [previous.windows[1]],
+      orgsIncomplete: true,
+    };
+    const carried = carryBudgets(next, previous);
+    assert.deepEqual(
+      carried.accounts.map((account) => account.login),
+      ['acme', 'octo'],
+    );
+    assert.deepEqual(
+      carried.windows.map((row) => row.id),
+      ['acme:actions-minutes', 'octo:actions-minutes'],
+    );
+  });
+});
+
 describe('Budget carry-over', () => {
   it('keeps the last budget rows when the budget listing fails', () => {
     const limit = { percentage: 0, resetsAt: '2026-11-01T00:00:00Z' };

@@ -84,6 +84,8 @@ export interface GithubUsage {
   unreadable?: Array<{ login: string; status: number; acceptedScopes?: string }>;
   /** Accounts whose budget listing failed this time (rate limit, outage). */
   budgetsMissing?: string[];
+  /** The org membership list failed part-way, so some orgs may be missing. */
+  orgsIncomplete?: boolean;
   /** Accounts whose public-repository minutes could not be read this time. */
   minutesMissing?: string[];
   status: UsageStatus;
@@ -98,6 +100,8 @@ export interface NetlifyUsage {
   unreadable?: Array<{ name: string; status: number }>;
   /** Slugs of teams whose credit lookup failed this time, so their last rows are kept. */
   creditsMissing?: string[];
+  /** The team listing itself failed; nothing in this snapshot is current. */
+  listingFailed?: boolean;
   models: ModelUsage[];
   status: UsageStatus;
   lastUpdated: number;

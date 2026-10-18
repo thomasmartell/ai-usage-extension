@@ -220,6 +220,25 @@ describe('Netlify usage request', () => {
     );
   });
 
+  it('keeps the last snapshot when the team listing fails', async () => {
+    mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 503 }));
+    const failed = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18, 12));
+    assert.equal(failed?.listingFailed, true);
+
+    const [team] = parseAccounts([account]);
+    const previous = {
+      teams: [{ slug: 'acme', name: 'Acme team', plan: 'Pro' }],
+      windows: buildAccountRows(team, creditStatus, true, credits),
+      models: [],
+      status: 'ok' as const,
+      lastUpdated: Date.UTC(2026, 9, 18, 11),
+    };
+    const kept = carryCredits(failed!, previous);
+    assert.equal(kept.windows.length, 2);
+    assert.equal(kept.lastUpdated, previous.lastUpdated);
+    assert.deepEqual(kept.unreadable, [{ name: 'Netlify', status: 503 }]);
+  });
+
   it('forgets a token Netlify rejects', async () => {
     mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 401 }));
     assert.equal(await NetlifyService.fetchUsage(), null);

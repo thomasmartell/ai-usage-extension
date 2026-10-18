@@ -182,6 +182,11 @@ export const buildAccountRows = (
  * unless the plan cycle they belong to has ended.
  */
 export const carryCredits = (next: NetlifyUsage, previous?: NetlifyUsage): NetlifyUsage => {
+  // The team listing failed: keep the last snapshot whole, with its own
+  // time (so the card reads as stale), and add the reason.
+  if (next.listingFailed && previous && !previous.listingFailed) {
+    return { ...previous, unreadable: next.unreadable };
+  }
   if (!next.creditsMissing?.length || !previous) return next;
   // Matched on the team slug that prefixes each row id: names need not be unique.
   const kept = previous.windows.filter(
@@ -241,11 +246,13 @@ export class NetlifyService {
         if ((await readToken()) === token) await this.signOut();
         return null;
       }
+      // Reported, and marked so `carryCredits` keeps the last snapshot's teams.
       return {
         teams: [],
         windows: [],
         models: [],
         unreadable: [{ name: 'Netlify', status: listing.status }],
+        listingFailed: true,
         status: 'ok',
         lastUpdated: now,
       };
