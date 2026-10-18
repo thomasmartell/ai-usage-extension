@@ -311,7 +311,13 @@ export const carryBudgets = (next: GithubUsage, previous?: GithubUsage): GithubU
   if (!next.budgetsMissing?.length || !previous) return next;
   const windows = [...next.windows];
   for (const login of next.budgetsMissing) {
-    const kept = previous.windows.filter((row) => row.id.startsWith(`${login}:budget:`));
+    // Only budgets of the same billing month: an old month's spend is not current.
+    const kept = previous.windows.filter(
+      (row) =>
+        row.id.startsWith(`${login}:budget:`) &&
+        row.limit.resetsAt !== null &&
+        Date.parse(row.limit.resetsAt) > next.lastUpdated,
+    );
     if (kept.length === 0) continue;
     const after = windows.map((row) => row.group).lastIndexOf(login);
     windows.splice(after < 0 ? windows.length : after + 1, 0, ...kept);
@@ -325,7 +331,8 @@ const fetchBudgets = async (base: string, token: string): Promise<Json | null> =
   const budgets: unknown[] = [];
   for (let page = 1; page <= BUDGET_PAGE_LIMIT; page += 1) {
     const result = await githubGet(`${base}/budgets?per_page=100&page=${page}`, token);
-    if (!result.ok || !isObject(result.data)) return page === 1 ? null : { budgets };
+    // A partial listing would silently drop budgets: treat it as a failure.
+    if (!result.ok || !isObject(result.data)) return null;
     if (Array.isArray(result.data.budgets)) budgets.push(...result.data.budgets);
     if (result.data.has_next_page !== true) break;
   }

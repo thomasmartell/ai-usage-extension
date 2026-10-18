@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 import {
   buildAccountRows,
+  carryCredits,
   NetlifyService,
   parseAccounts,
 } from '../src/background/services/NetlifyService';
@@ -183,6 +184,33 @@ describe('Netlify usage request', () => {
     const usage = await NetlifyService.fetchUsage(Date.UTC(2026, 9, 18));
     assert.deepEqual(usage?.windows, []);
     assert.deepEqual(usage?.unreadable, [{ name: 'Acme team', status: 403 }]);
+  });
+
+  it('keeps the last credit rows, not legacy meters, when the credit lookup fails', async () => {
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      if (url.endsWith('/accounts')) return Response.json([account]);
+      if (url.endsWith('/billing/credits')) return new Response('{}', { status: 429 });
+      return Response.json(buildStatus);
+    });
+    const now = Date.UTC(2026, 9, 18);
+    const usage = await NetlifyService.fetchUsage(now);
+    // The account still reports a legacy minute allowance; it must not return.
+    assert.deepEqual(usage?.windows, []);
+    assert.deepEqual(usage?.creditsMissing, ['Acme team']);
+
+    const [team] = parseAccounts([account]);
+    const previous = { ...usage!, windows: buildAccountRows(team, creditStatus, true, credits) };
+    assert.deepEqual(
+      carryCredits(usage!, previous).windows.map((row) => row.id),
+      ['acme:plan-credits', 'acme:addon-credits'],
+    );
+    // After the cycle ends, only the add-ons (which never reset) carry over.
+    assert.deepEqual(
+      carryCredits({ ...usage!, lastUpdated: Date.UTC(2026, 10, 6) }, previous).windows.map(
+        (row) => row.id,
+      ),
+      ['acme:addon-credits'],
+    );
   });
 
   it('forgets a token Netlify rejects', async () => {

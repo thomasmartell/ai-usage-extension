@@ -11,7 +11,7 @@ import {
 } from '../../shared/types';
 import { clampPercent, getUsageTone } from '../../shared/utils';
 import { carryBudgets, GithubService } from './GithubService';
-import { NetlifyService } from './NetlifyService';
+import { carryCredits, NetlifyService } from './NetlifyService';
 
 const ENDPOINTS = {
   claudeOrgs: 'https://claude.ai/api/organizations',
@@ -504,6 +504,7 @@ export class UsageService {
 
     const next = await this.getUsageState();
     const previousGithub = next.github;
+    const previousNetlify = next.netlify;
     if (claude) next.claude = claude;
     if (codex) next.codex = codex;
     // Read the tokens again rather than trusting the fetch: a sign-out, or a
@@ -517,7 +518,8 @@ export class UsageService {
     else if (github && githubNow === githubToken)
       next.github = carryBudgets(github, previousGithub);
     if (!netlifyNow) delete next.netlify;
-    else if (netlify && netlifyNow === netlifyToken) next.netlify = netlify;
+    else if (netlify && netlifyNow === netlifyToken)
+      next.netlify = carryCredits(netlify, previousNetlify);
 
     await this.saveUsageState(next);
     try {

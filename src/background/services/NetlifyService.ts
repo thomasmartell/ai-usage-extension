@@ -172,6 +172,22 @@ export const buildAccountRows = (
   return rows;
 };
 
+/**
+ * Keep a team's last credit rows when its credit lookup failed this time,
+ * unless the plan cycle they belong to has ended.
+ */
+export const carryCredits = (next: NetlifyUsage, previous?: NetlifyUsage): NetlifyUsage => {
+  if (!next.creditsMissing?.length || !previous) return next;
+  const kept = previous.windows.filter(
+    (row) =>
+      row.group !== undefined &&
+      next.creditsMissing!.includes(row.group) &&
+      row.limit.unit === 'credits' &&
+      (row.limit.resetsAt === null || Date.parse(row.limit.resetsAt) > next.lastUpdated),
+  );
+  return kept.length > 0 ? { ...next, windows: [...next.windows, ...kept] } : next;
+};
+
 /* -------------------- HTTP -------------------- */
 
 type ApiResult = { ok: true; data: unknown } | { ok: false; status: number };
@@ -241,8 +257,17 @@ export class NetlifyService {
     );
 
     const unreadable: NonNullable<NetlifyUsage['unreadable']> = [];
+    const creditsMissing: string[] = [];
     const windows = accounts.flatMap((account, index) => {
       const [status, credits] = details[index];
+      // A failed credit lookup is not a legacy plan: showing leftover minute
+      // allowances instead would mislead, so the last credit rows are kept
+      // (see `carryCredits`). A 404 means the team has no credit balance.
+      if (!credits || (!credits.ok && credits.status !== 404)) {
+        unreadable.push({ name: account.name, status: credits?.status ?? 0 });
+        creditsMissing.push(account.name);
+        return [];
+      }
       // Always under a team heading, which also carries the cycle's reset date.
       const rows = buildAccountRows(
         account,
@@ -264,6 +289,7 @@ export class NetlifyService {
       windows,
       models: [],
       ...(unreadable.length > 0 ? { unreadable } : {}),
+      ...(creditsMissing.length > 0 ? { creditsMissing } : {}),
       status: getUsageTone(highest),
       lastUpdated: now,
     };

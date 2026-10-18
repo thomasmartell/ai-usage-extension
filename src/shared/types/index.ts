@@ -94,6 +94,8 @@ export interface NetlifyUsage {
   windows: ModelUsage[];
   /** Teams (or the team listing) that gave no meters, with the HTTP status that explains it. */
   unreadable?: Array<{ name: string; status: number }>;
+  /** Teams whose credit lookup failed this time, so their last rows are kept. */
+  creditsMissing?: string[];
   models: ModelUsage[];
   status: UsageStatus;
   lastUpdated: number;

@@ -185,7 +185,7 @@ describe('GitHub billing rows', () => {
 
 describe('Budget carry-over', () => {
   it('keeps the last budget rows when the budget listing fails', () => {
-    const limit = { percentage: 0, resetsAt: null };
+    const limit = { percentage: 0, resetsAt: '2026-11-01T00:00:00Z' };
     const previous = buildGithubUsage('octo', [], NOW);
     previous.windows = [
       { id: 'acme:actions-minutes', label: 'Actions minutes', group: 'acme', limit },
@@ -204,6 +204,12 @@ describe('Budget carry-over', () => {
     // Nothing to carry when the listing succeeded.
     const { budgetsMissing: _, ...fresh } = next;
     assert.equal(carryBudgets(fresh, previous), fresh);
+    // Nor into a new billing month: last month's spend is not current.
+    const nextMonth = { ...next, lastUpdated: Date.UTC(2026, 10, 1, 1) };
+    assert.deepEqual(
+      carryBudgets(nextMonth, previous).windows.map((row) => row.id),
+      ['acme:actions-minutes', 'octo:actions-minutes'],
+    );
   });
 });
 
@@ -454,6 +460,30 @@ describe('GitHub usage request', () => {
       usage?.windows.map((row) => row.id),
       ['acme:actions-minutes', 'acme:budget:actions', 'acme:budget:ai_credits'],
     );
+  });
+
+  it('treats a failed later budget page as a failed listing', async () => {
+    store = { github_token: 'github_pat_test', github_orgs: ['acme'] };
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) return Response.json([]);
+      if (path.startsWith('/organizations/acme/settings/billing/usage/summary')) {
+        return Response.json(summary);
+      }
+      if (path === '/orgs/acme') return Response.json({ plan: { name: 'enterprise' } });
+      if (path.endsWith('/budgets?per_page=100&page=1')) {
+        return Response.json({ budgets: budgets.budgets, has_next_page: true });
+      }
+      return new Response('{}', { status: 403 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(
+      usage?.windows.map((row) => row.id),
+      ['acme:actions-minutes'],
+    );
+    assert.deepEqual(usage?.budgetsMissing, ['acme']);
   });
 
   it('signs out when GitHub rejects the stored token', async () => {
