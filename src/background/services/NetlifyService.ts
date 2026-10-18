@@ -210,8 +210,10 @@ export class NetlifyService {
     const listing = await netlifyGet('/accounts', token);
     if (!listing.ok) {
       // A revoked or expired token: drop it so the popup asks for a new one.
+      // A revoked or expired token: drop it so the popup asks for a new one,
+      // unless a different token was saved while this request was waiting.
       if (listing.status === 401) {
-        await this.signOut();
+        if ((await readToken()) === token) await this.signOut();
         return null;
       }
       return {

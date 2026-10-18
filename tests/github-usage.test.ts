@@ -287,6 +287,38 @@ describe('GitHub usage request', () => {
     assert.deepEqual(usage.unreadable, []);
   });
 
+  it('follows every page of organization memberships', async () => {
+    const orgPages: string[] = [];
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      const path = url.replace('https://api.github.com', '');
+      if (path === '/user') return Response.json({ login: 'octo' });
+      if (path.startsWith('/user/orgs')) {
+        orgPages.push(path);
+        if (path.endsWith('&page=1')) {
+          return Response.json(Array.from({ length: 100 }, (_, i) => ({ login: `org-${i}` })));
+        }
+        return Response.json([{ login: 'last-org' }]);
+      }
+      return new Response('{}', { status: 404 });
+    });
+
+    const usage = await GithubService.fetchUsage(NOW);
+    assert.deepEqual(orgPages, [
+      '/user/orgs?per_page=100&page=1',
+      '/user/orgs?per_page=100&page=2',
+    ]);
+    assert.ok(usage?.unreadable.some((entry) => entry.login === 'last-org'));
+  });
+
+  it('keeps a newer token when an older one is rejected mid-refresh', async () => {
+    mock.method(globalThis, 'fetch', async () => {
+      store.github_token = 'newer-token';
+      return new Response('{}', { status: 401 });
+    });
+    assert.equal(await GithubService.fetchUsage(NOW, 'test-token'), null);
+    assert.equal(store.github_token, 'newer-token');
+  });
+
   it('saves a pasted token only after GitHub accepts it', async () => {
     store = {};
     mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) =>

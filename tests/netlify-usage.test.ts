@@ -190,6 +190,15 @@ describe('Netlify usage request', () => {
     assert.equal(store.netlify_token, undefined);
   });
 
+  it('keeps a newer token when an older one is rejected mid-refresh', async () => {
+    mock.method(globalThis, 'fetch', async () => {
+      store.netlify_token = 'newer-token';
+      return new Response('{}', { status: 401 });
+    });
+    assert.equal(await NetlifyService.fetchUsage(Date.now(), 'test-token'), null);
+    assert.equal(store.netlify_token, 'newer-token');
+  });
+
   it('saves a pasted token only after Netlify accepts it', async () => {
     store = {};
     mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) =>

@@ -382,8 +382,9 @@ export class GithubService {
 
     const user = await githubGet('/user', token);
     if (!user.ok) {
-      // A revoked or expired token: drop it so the popup offers sign-in again.
-      if (user.status === 401) await this.signOut();
+      // A revoked or expired token: drop it so the popup offers sign-in again,
+      // unless a different token was saved while this request was waiting.
+      if (user.status === 401 && (await readToken()) === token) await this.signOut();
       return null;
     }
 
@@ -391,14 +392,20 @@ export class GithubService {
     if (!login) return null;
 
     const unreadable: Unreadable[] = [];
-    const orgs = await githubGet('/user/orgs?per_page=100', token);
-    if (!orgs.ok) unreadable.push({ login: 'organizations', status: orgs.status });
-    const listedOrgs =
-      orgs.ok && Array.isArray(orgs.data)
-        ? orgs.data.flatMap((org) =>
-            isObject(org) && readString(org.login) ? [String(org.login)] : [],
-          )
-        : [];
+    const listedOrgs: string[] = [];
+    for (let page = 1; page <= REPO_PAGE_LIMIT; page += 1) {
+      const orgs = await githubGet(`/user/orgs?per_page=100&page=${page}`, token);
+      if (!orgs.ok || !Array.isArray(orgs.data)) {
+        if (!orgs.ok) unreadable.push({ login: 'organizations', status: orgs.status });
+        break;
+      }
+      listedOrgs.push(
+        ...orgs.data.flatMap((org) =>
+          isObject(org) && readString(org.login) ? [String(org.login)] : [],
+        ),
+      );
+      if (orgs.data.length < 100) break;
+    }
     // Fine-grained tokens always get an empty org list, so the orgs saved
     // alongside a pasted token are checked too.
     const orgLogins = [...new Set([...listedOrgs, ...(await readSavedOrgs())])];
