@@ -77,9 +77,9 @@ const signOutOf = async (
   signOut: () => Promise<void>,
 ): Promise<UsageState> => {
   await signOut();
-  const state = await UsageService.getUsageState();
-  delete state[provider];
-  await UsageService.saveUsageState(state);
+  const state = await UsageService.updateUsageState((current) => {
+    delete current[provider];
+  });
   await queueBadgeUpdate(state);
   return state;
 };

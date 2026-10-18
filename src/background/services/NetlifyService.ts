@@ -86,7 +86,12 @@ export const buildAccountRows = (
   const rows: ModelUsage[] = [];
   const group = grouped ? { group: account.name } : {};
 
-  const minutes = isObject(buildStatus) && isObject(buildStatus.minutes) ? buildStatus.minutes : {};
+  // Netlify's schema types the team build status as an array of entries; the
+  // live endpoint answers with a single object. Accept either.
+  const status = Array.isArray(buildStatus)
+    ? buildStatus.find((entry) => isObject(entry) && isObject(entry.minutes))
+    : buildStatus;
+  const minutes = isObject(status) && isObject(status.minutes) ? status.minutes : {};
   const periodStart = readDate(minutes.period_start_date);
   const periodEnd = readDate(minutes.period_end_date);
   const window =

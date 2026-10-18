@@ -315,22 +315,25 @@ const fetchAccountBilling = async (
  * this time, so a passing rate limit does not make budgets vanish.
  */
 export const carryBudgets = (next: GithubUsage, previous?: GithubUsage): GithubUsage => {
-  if (!previous || (!next.budgetsMissing?.length && !next.minutesMissing?.length)) return next;
+  if (!next.budgetsMissing?.length && !next.minutesMissing?.length) return next;
   // Only rows of the same billing month: an old month's figures are not current.
   const current = (row: ModelUsage) =>
     row.limit.resetsAt !== null && Date.parse(row.limit.resetsAt) > next.lastUpdated;
-  const windows = [...next.windows];
+  let windows = [...next.windows];
 
   // A failed public-repository lookup would overstate the minutes used, so
-  // the last accurate minutes row stands in for this month's.
+  // the last accurate minutes row of this month stands in; with none, the
+  // row is left out rather than shown inflated.
   for (const login of next.minutesMissing ?? []) {
     const id = `${login}:actions-minutes`;
-    const kept = previous.windows.find((row) => row.id === id && current(row));
-    const index = windows.findIndex((row) => row.id === id);
-    if (kept && index >= 0) windows[index] = kept;
+    const kept = previous?.windows.find((row) => row.id === id && current(row));
+    windows = kept
+      ? windows.map((row) => (row.id === id ? kept : row))
+      : windows.filter((row) => row.id !== id);
   }
 
   for (const login of next.budgetsMissing ?? []) {
+    if (!previous) break;
     const kept = previous.windows.filter(
       (row) => row.id.startsWith(`${login}:budget:`) && current(row),
     );

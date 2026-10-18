@@ -480,6 +480,8 @@ const historySamples = (state: UsageState): Array<[string, number]> => {
 
 /* -------------------- Service -------------------- */
 
+let stateQueue: Promise<unknown> = Promise.resolve();
+
 export class UsageService {
   static async getUsageState(): Promise<UsageState> {
     const stored = await chrome.storage.local.get(STORAGE_KEYS.usageState);
@@ -502,32 +504,51 @@ export class UsageService {
       NetlifyService.fetchUsage(Date.now(), netlifyToken).catch(() => null),
     ]);
 
-    const next = await this.getUsageState();
-    const previousGithub = next.github;
-    const previousNetlify = next.netlify;
-    if (claude) next.claude = claude;
-    if (codex) next.codex = codex;
-    // Read the tokens again rather than trusting the fetch: a sign-out, or a
-    // different token saved, while this refresh was in flight must not have
-    // the old token's snapshot stored.
-    const [githubNow, netlifyNow] = await Promise.all([
-      GithubService.currentToken(),
-      NetlifyService.currentToken(),
-    ]);
-    if (!githubNow) delete next.github;
-    else if (github && githubNow === githubToken)
-      next.github = carryBudgets(github, previousGithub);
-    if (!netlifyNow) delete next.netlify;
-    else if (netlify && netlifyNow === netlifyToken)
-      next.netlify = carryCredits(netlify, previousNetlify);
+    return this.updateUsageState(async (next) => {
+      const previousGithub = next.github;
+      const previousNetlify = next.netlify;
+      if (claude) next.claude = claude;
+      if (codex) next.codex = codex;
+      // Read the tokens again rather than trusting the fetch: a sign-out, or a
+      // different token saved, while this refresh was in flight must not have
+      // the old token's snapshot stored.
+      const [githubNow, netlifyNow] = await Promise.all([
+        GithubService.currentToken(),
+        NetlifyService.currentToken(),
+      ]);
+      if (!githubNow) delete next.github;
+      else if (github && githubNow === githubToken)
+        next.github = carryBudgets(github, previousGithub);
+      if (!netlifyNow) delete next.netlify;
+      else if (netlify && netlifyNow === netlifyToken)
+        next.netlify = carryCredits(netlify, previousNetlify);
 
-    await this.saveUsageState(next);
-    try {
-      await this.recordHistory(next);
-    } catch (error) {
-      console.debug('Failed to record usage history', error);
-    }
-    return next;
+      try {
+        await this.recordHistory(next);
+      } catch (error) {
+        console.debug('Failed to record usage history', error);
+      }
+    });
+  }
+
+  /**
+   * Read, change and save the stored snapshot as one step. Refreshes and
+   * sign-outs both rewrite it; queued here, neither can save over the other
+   * with a copy read before the other's write.
+   */
+  static updateUsageState(
+    change: (state: UsageState) => Promise<void> | void,
+  ): Promise<UsageState> {
+    const run = stateQueue
+      .catch(() => undefined)
+      .then(async () => {
+        const state = await this.getUsageState();
+        await change(state);
+        await this.saveUsageState(state);
+        return state;
+      });
+    stateQueue = run;
+    return run;
   }
 
   /** Append the snapshot to the rolling history and prune anything stale. */

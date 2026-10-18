@@ -98,6 +98,13 @@ describe('Netlify rows', () => {
     assert.equal(minutes.limit.percentage, 25);
   });
 
+  it('reads a build status sent as an array of entries', () => {
+    const [team] = parseAccounts([{ ...account, capabilities: {} }]);
+    const [minutes] = buildAccountRows(team, [buildStatus], false);
+    assert.equal(minutes.limit.used, 6250);
+    assert.equal(minutes.limit.resetsAt, '2026-11-05T00:00:00.000Z');
+  });
+
   it('falls back to the account capability when build status is unavailable', () => {
     const [team] = parseAccounts([account]);
     const [minutes] = buildAccountRows(team, null, false);

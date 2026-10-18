@@ -527,6 +527,11 @@ describe('GitHub usage request', () => {
         row.id === 'acme:actions-minutes' ? { ...row, limit: { ...row.limit, used: 12345 } } : row,
       ),
     };
+    // With no row of this month to fall back on, the inflated row is left out.
+    assert.equal(
+      carryBudgets(usage!).windows.some((row) => row.id === 'acme:actions-minutes'),
+      false,
+    );
     const carried = carryBudgets(usage!, previous);
     assert.equal(
       carried.windows.find((row) => row.id === 'acme:actions-minutes')?.limit.used,
