@@ -19,10 +19,16 @@ export const ACTIONS_INCLUDED_MINUTES: Record<string, number> = {
   enterprise: 50_000,
 };
 
-/** Rate at which each standard hosted runner draws down the included minutes. */
+/**
+ * Rate at which each standard hosted runner draws down the included minutes.
+ * Larger runners are billed outright and are left out.
+ */
 const MINUTE_MULTIPLIERS: Record<string, number> = {
   actions_linux: 1,
+  actions_linux_slim: 1,
+  actions_linux_arm: 1,
   actions_windows: 2,
+  actions_windows_arm: 2,
   actions_macos: 10,
 };
 
@@ -541,6 +547,8 @@ export class GithubService {
 
       const token = readString(data.access_token);
       if (token) {
+        // Cancelled or restarted while the request was in flight: discard it.
+        if (!(await this.isCurrentFlow(flow))) return false;
         await chrome.storage.local.set({ [STORAGE_KEYS.githubToken]: token });
         await chrome.storage.local.remove(STORAGE_KEYS.githubDeviceFlow);
         return true;

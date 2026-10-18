@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 import {
+  actionsMinutes,
   billingMonth,
   buildAccountRows,
   buildGithubUsage,
@@ -178,6 +179,18 @@ describe('GitHub billing rows', () => {
     );
     assert.equal(usage.windows[1].limit.percentage, 97);
     assert.equal(usage.status, 'critical');
+  });
+});
+
+describe('Actions minutes', () => {
+  it('counts slim and Arm standard runners and leaves larger runners out', () => {
+    const items = [
+      { sku: 'actions_linux_slim', grossQuantity: 10 },
+      { sku: 'actions_linux_arm', grossQuantity: 20 },
+      { sku: 'actions_windows_arm', grossQuantity: 5 },
+      { sku: 'actions_linux_4_core', grossQuantity: 100 },
+    ].map((item) => ({ product: 'actions', netAmount: 0, ...item }));
+    assert.equal(actionsMinutes(items as Parameters<typeof actionsMinutes>[0]), 40);
   });
 });
 
@@ -471,6 +484,31 @@ describe('GitHub usage request', () => {
     assert.equal(signedIn, true);
     assert.equal(store.github_token, 'granted-token');
     assert.equal(store.github_device_flow, undefined);
+  });
+
+  it('discards a token that arrives after the sign-in was cancelled', async () => {
+    delete store.github_token;
+    mock.timers.enable({ apis: ['setTimeout'] });
+    mock.method(globalThis, 'fetch', async (url: string) => {
+      if (url.endsWith('/device/code')) {
+        return Response.json({
+          device_code: 'd',
+          user_code: 'LATE-0000',
+          verification_uri: 'https://github.com/login/device',
+          expires_in: 900,
+          interval: 5,
+        });
+      }
+      // The user cancels while the token request is in flight.
+      await GithubService.signOut();
+      return Response.json({ access_token: 'late-token' });
+    });
+
+    await GithubService.startSignIn(() => assert.fail('should not sign in'));
+    mock.timers.tick(5000);
+    for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal(store.github_token, undefined);
   });
 
   it('records why a device sign-in ended without a token', async () => {
