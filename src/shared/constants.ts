@@ -18,7 +18,15 @@ export const STORAGE_KEYS = {
   netlifyToken: 'netlify_token',
   /** Device-flow sign-in in progress (`GithubDeviceFlow`), shown by the popup. */
   githubDeviceFlow: 'github_device_flow',
+  /** Persisted `MacRunnerState` snapshot for the Mac runner card and badge. */
+  macRunnerState: 'mac_runner_state',
 } as const;
+
+/** Native-messaging host that reports on and switches the Mac's CI runner VM. */
+export const MAC_RUNNER_HOST = 'com.tom.ci_runner';
+
+/** Name of the recurring alarm that polls the Mac runner for the badge. */
+export const MAC_RUNNER_ALARM = 'refreshMacRunner';
 
 /** Name of the recurring alarm that refreshes usage in the background. */
 export const REFRESH_ALARM = 'refreshUsage';

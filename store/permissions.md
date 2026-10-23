@@ -22,6 +22,14 @@ A single recurring `chrome.alarms` entry wakes the service worker every five
 minutes to re-fetch the usage limits. Without it the toolbar icon would only
 update while the popup was open, which defeats the at-a-glance use case.
 
+## nativeMessaging
+
+Used only by the optional "Mac runner" card. It lets the extension ask a local
+helper program (`com.tom.ci_runner`), when one is installed on the computer,
+whether a self-hosted CI runner is on, and to start or stop it. The helper must
+be registered with the browser and lists this extension as its only allowed
+caller. Without it the card stays hidden and nothing is sent anywhere.
+
 ## cookies
 
 Used to read the `lastActiveOrg` cookie from `claude.ai` so the extension can

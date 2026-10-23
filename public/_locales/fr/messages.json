@@ -259,5 +259,92 @@
   },
   "sectionServices": {
     "message": "Services développeur"
+  },
+  "macRunnerTitle": {
+    "message": "Mac runner"
+  },
+  "macRunnerOn": {
+    "message": "ON"
+  },
+  "macRunnerOff": {
+    "message": "OFF"
+  },
+  "macRunnerStarting": {
+    "message": "STARTING"
+  },
+  "macRunnerStopping": {
+    "message": "STOPPING"
+  },
+  "macRunnerStart": {
+    "message": "Start"
+  },
+  "macRunnerStop": {
+    "message": "Stop"
+  },
+  "macRunnerStopConfirm": {
+    "message": "Stop anyway?"
+  },
+  "macRunnerChecked": {
+    "message": "checked $1"
+  },
+  "macRunnerRunnerOff": {
+    "message": "offline"
+  },
+  "macRunnerRunnerConnecting": {
+    "message": "connecting…"
+  },
+  "macRunnerRunnerBusy": {
+    "message": "running a job"
+  },
+  "macRunnerRunnerIdle": {
+    "message": "idle"
+  },
+  "macRunnerNoJobs": {
+    "message": "No jobs on this Mac in the last 2 days."
+  },
+  "macRunnerHeartbeat": {
+    "message": "Heartbeat $1"
+  },
+  "macRunnerNoHeartbeat": {
+    "message": "No heartbeat yet"
+  },
+  "macRunnerRouting": {
+    "message": "MAC_RUNNER = $1"
+  },
+  "macRunnerNoRouting": {
+    "message": "routing not switched on"
+  },
+  "macRunnerLowMemory": {
+    "message": "Mac memory is low ($1% free). Stop the runner before heavy work."
+  },
+  "macRunnerMinutes": {
+    "message": "Run here this month: $1 min over $2 jobs"
+  },
+  "macRunnerMinutesShare": {
+    "message": "$1% of $2 included GitHub minutes"
+  },
+  "sectionMac": {
+    "message": "This Mac"
+  },
+  "prTitle": {
+    "message": "Open pull requests"
+  },
+  "prSummary": {
+    "message": "$1 open · $2 failing · $3 conflicting"
+  },
+  "prFailing": {
+    "message": "failing"
+  },
+  "prConflicting": {
+    "message": "conflicts"
+  },
+  "prDraft": {
+    "message": "draft"
+  },
+  "prMore": {
+    "message": "+$1 more"
+  },
+  "prAllGood": {
+    "message": "Nothing failing or conflicting."
   }
 }

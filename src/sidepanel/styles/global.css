@@ -815,3 +815,175 @@ html[data-view='full'] .au-card__body {
     transition: none;
   }
 }
+
+/* ---- Mac runner ----------------------------------------------------- */
+
+.au-runner {
+  --au-runner-tone: var(--au-text-faint);
+}
+
+.au-runner--on {
+  --au-runner-tone: var(--au-fill-ahead);
+  border-color: rgba(143, 168, 126, 0.45);
+}
+
+.au-runner--starting,
+.au-runner--stopping {
+  --au-runner-tone: var(--au-fill-warning);
+}
+
+.au-runner__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.au-runner__header .au-card__heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.au-runner__state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 74px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--au-runner-tone);
+  color: var(--au-runner-tone);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.au-runner--on .au-runner__state {
+  background: rgba(143, 168, 126, 0.14);
+}
+
+.au-runner__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--au-runner-tone);
+}
+
+.au-runner--starting .au-runner__dot,
+.au-runner--stopping .au-runner__dot {
+  animation: au-pulse 1s ease-in-out infinite;
+}
+
+@keyframes au-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.au-runner__power {
+  border: 1px solid var(--au-line-strong);
+  background: transparent;
+  color: var(--au-text);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.au-runner__power:hover:not(:disabled) {
+  background: var(--au-surface-hover);
+}
+
+.au-runner__power:disabled {
+  cursor: default;
+  color: var(--au-text-faint);
+}
+
+.au-runner__power--confirm {
+  border-color: var(--au-fill-critical);
+  color: var(--au-fill-critical);
+}
+
+.au-runner__repo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.au-runner__repo-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 1px;
+  font-size: 12px;
+}
+
+.au-runner__repo-name {
+  color: var(--au-text);
+}
+
+.au-runner__repo-state {
+  color: var(--au-text-faint);
+}
+
+.au-runner__repo-state--busy {
+  color: var(--au-fill-ahead);
+}
+
+.au-runner__job {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--au-text-muted);
+  text-decoration: none;
+}
+
+a.au-runner__job:hover .au-runner__job-name {
+  color: var(--au-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.au-runner__job-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.au-runner__job-time {
+  color: var(--au-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.au-runner__mark {
+  width: 10px;
+  text-align: center;
+  color: var(--au-text-faint);
+}
+
+.au-runner__mark--now,
+.au-runner__mark--success {
+  color: var(--au-fill-ahead);
+}
+
+.au-runner__mark--failure {
+  color: var(--au-fill-critical);
+}
+
+.au-runner__warning {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--au-fill-warning);
+  color: var(--au-fill-warning);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.au-runner__minutes {
+  margin: 0;
+  font-size: 11px;
+  color: var(--au-text-muted);
+  font-variant-numeric: tabular-nums;
+}
