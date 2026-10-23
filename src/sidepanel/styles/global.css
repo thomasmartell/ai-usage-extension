@@ -970,3 +970,20 @@ a.au-runner__job:hover .au-runner__job-name {
 .au-runner__mark--failure {
   color: var(--au-fill-critical);
 }
+
+.au-runner__warning {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--au-fill-warning);
+  color: var(--au-fill-warning);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.au-runner__minutes {
+  margin: 0;
+  font-size: 11px;
+  color: var(--au-text-muted);
+  font-variant-numeric: tabular-nums;
+}

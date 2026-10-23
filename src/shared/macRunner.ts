@@ -28,6 +28,29 @@ export interface MacRunnerRepo {
   recent?: MacRunnerJob[];
 }
 
+/** Minutes GitHub would have billed for this month's jobs on the Mac (per-job, rounded up). */
+export interface MacRunnerMinutes {
+  /** `YYYY-MM`, UTC. */
+  month: string;
+  minutes: number;
+  jobs: number;
+  byRepo: Record<string, { minutes: number; jobs: number }>;
+}
+
+/** An open pull request with its CI state, from `gh pr list`. */
+export interface MacRunnerPullRequest {
+  repo: string;
+  number: number;
+  title: string | null;
+  url: string | null;
+  draft: boolean;
+  checks: 'failing' | 'pending' | 'passing' | 'none';
+  /** Up to three failing check names. */
+  failing: string[];
+  /** GitHub reports merge conflicts with the base branch. */
+  conflicting: boolean;
+}
+
 export interface MacRunnerStatus {
   vm: MacRunnerVm;
   repos: MacRunnerRepo[];
@@ -38,6 +61,10 @@ export interface MacRunnerStatus {
   /** Epoch ms written to MAC_RUNNER_SEEN by the Mac's heartbeat. */
   heartbeatAt?: number | null;
   macRunner?: string | null;
+  /** Share of the Mac's memory that is free (`kern.memorystatus_level`). */
+  memoryFreePercent?: number | null;
+  minutes?: MacRunnerMinutes | null;
+  prs?: MacRunnerPullRequest[];
 }
 
 /** Persisted snapshot: `available` is false when the helper isn't installed. */
@@ -98,6 +125,8 @@ export const refreshMacRunner = async (detail: boolean): Promise<MacRunnerState>
       });
       status.heartbeatAt = previous.heartbeatAt;
       status.macRunner = previous.macRunner;
+      status.minutes = previous.minutes;
+      status.prs = previous.prs;
     }
     next = { available: true, status };
   } catch (cause) {

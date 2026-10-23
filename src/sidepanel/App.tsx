@@ -7,9 +7,11 @@ import { useNow } from '../shared/hooks/useNow';
 import { GithubConnect } from './components/GithubConnect';
 import { Headline } from './components/Headline';
 import { MacRunnerCard } from './components/MacRunnerCard';
+import { PullRequestsCard } from './components/PullRequestsCard';
 import { NetlifyConnect } from './components/NetlifyConnect';
 import { ProviderCard } from './components/ProviderCard';
 import { useGithubAuth } from './hooks/useGithubAuth';
+import { useMacRunner } from './hooks/useMacRunner';
 import { useNetlifyAuth } from './hooks/useNetlifyAuth';
 import { useUsageData } from './hooks/useUsageData';
 import './styles/global.css';
@@ -27,11 +29,21 @@ export const App = () => {
   const { usage, loading, refreshing, error, refresh } = useUsageData();
   const githubAuth = useGithubAuth();
   const netlifyAuth = useNetlifyAuth();
+  const macRunner = useMacRunner();
   const now = useNow(30_000);
 
   const initialLoading =
     loading && !usage.claude && !usage.codex && !usage.github && !usage.netlify;
   const netlifyTeams = usage.netlify?.teams ?? [];
+  const githubMinutes = usage.github?.windows.find(
+    (row) => row.limit.unit === 'minutes' && (row.limit.limit ?? 0) > 0,
+  )?.limit;
+  const macCards = (
+    <>
+      <MacRunnerCard runner={macRunner} githubMinutes={githubMinutes} />
+      <PullRequestsCard runner={macRunner} />
+    </>
+  );
 
   const cards = {
     claude: (
@@ -151,7 +163,12 @@ export const App = () => {
 
       {fullView ? (
         <div className="au-board">
-          <MacRunnerCard />
+          {macRunner.state?.available && (
+            <section className="au-section">
+              <h3 className="au-section__title">{msg('sectionMac')}</h3>
+              <div className="au-cards au-cards--pair">{macCards}</div>
+            </section>
+          )}
           <section className="au-section">
             <h3 className="au-section__title">{msg('sectionAssistants')}</h3>
             <div className="au-cards au-cards--pair">
@@ -169,7 +186,7 @@ export const App = () => {
         </div>
       ) : (
         <div className="au-cards">
-          <MacRunnerCard />
+          {macCards}
           {cards.claude}
           {cards.codex}
           {cards.github}

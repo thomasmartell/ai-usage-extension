@@ -108,6 +108,17 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   macRunnerNoHeartbeat: 'No heartbeat yet',
   macRunnerRouting: 'MAC_RUNNER = $1',
   macRunnerNoRouting: 'routing not switched on',
+  macRunnerLowMemory: 'Mac memory is low ($1% free). Stop the runner before heavy work.',
+  macRunnerMinutes: 'Run here this month: $1 min over $2 jobs',
+  macRunnerMinutesShare: '$1% of $2 included GitHub minutes',
+  sectionMac: 'This Mac',
+  prTitle: 'Open pull requests',
+  prSummary: '$1 open · $2 failing · $3 conflicting',
+  prFailing: 'failing',
+  prConflicting: 'conflicts',
+  prDraft: 'draft',
+  prMore: '+$1 more',
+  prAllGood: 'Nothing failing or conflicting.',
 };
 
 export const msg = (name: string, substitutions?: string | string[]): string => {

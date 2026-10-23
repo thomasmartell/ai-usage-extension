@@ -3,7 +3,8 @@ import { msg } from '../../shared/i18n';
 import type { MacRunnerJob, MacRunnerRepo, MacRunnerVm } from '../../shared/macRunner';
 import { useNow } from '../../shared/hooks/useNow';
 import { formatRelativeTime } from '../../shared/utils';
-import { useMacRunner } from '../hooks/useMacRunner';
+import type { UsageLimit } from '../../shared/types';
+import type { MacRunnerData } from '../hooks/useMacRunner';
 
 const VM_LABEL: Record<MacRunnerVm, string> = {
   on: 'macRunnerOn',
@@ -107,10 +108,19 @@ const RepoRow: React.FC<{ repo: MacRunnerRepo; vmOn: boolean; now: number }> = (
   );
 };
 
+/** Below this share of free memory, a running VM is worth stopping before heavy work. */
+const LOW_MEMORY_PERCENT = 20;
+
+interface MacRunnerCardProps {
+  runner: MacRunnerData;
+  /** The GitHub card's monthly Actions minutes row, to show what the Mac saved against it. */
+  githubMinutes?: UsageLimit;
+}
+
 /** On/off state, power button and recent jobs for the self-hosted runners on the Mac. */
-export const MacRunnerCard: React.FC = () => {
+export const MacRunnerCard: React.FC<MacRunnerCardProps> = ({ runner, githubMinutes }) => {
   const now = useNow(5_000);
-  const { state, switching, switchError, setPower } = useMacRunner();
+  const { state, switching, switchError, setPower } = runner;
   const [confirmStop, setConfirmStop] = useState(false);
   const status = state?.status;
   const vm = status?.vm;
@@ -173,10 +183,29 @@ export const MacRunnerCard: React.FC = () => {
         </p>
       )}
 
+      {vm === 'on' &&
+        status.memoryFreePercent != null &&
+        status.memoryFreePercent < LOW_MEMORY_PERCENT && (
+          <p className="au-runner__warning" role="alert">
+            {msg('macRunnerLowMemory', String(status.memoryFreePercent))}
+          </p>
+        )}
+
       <div className="au-card__body">
         {status.repos.map((repo) => (
           <RepoRow key={repo.repo} repo={repo} vmOn={vm === 'on'} now={now} />
         ))}
+        {status.minutes && (
+          <p className="au-runner__minutes">
+            {msg('macRunnerMinutes', [String(status.minutes.minutes), String(status.minutes.jobs)])}
+            {githubMinutes?.limit
+              ? ` · ${msg('macRunnerMinutesShare', [
+                  ((status.minutes.minutes / githubMinutes.limit) * 100).toFixed(1),
+                  githubMinutes.limit.toLocaleString(),
+                ])}`
+              : ''}
+          </p>
+        )}
         {status.detail && (
           <p className="au-footnote">
             {status.heartbeatAt
