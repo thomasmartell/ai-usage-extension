@@ -167,11 +167,7 @@ export const summarizeUsage = (state: UsageState): UsageSummary | null => {
 };
 
 const resetBadge = async (): Promise<void> => {
-  await Promise.all([
-    setActionIcon(10),
-    chrome.action.setBadgeText({ text: '' }),
-    chrome.action.setTitle({ title: msg('appShortName') }),
-  ]);
+  await Promise.all([setActionIcon(10), chrome.action.setTitle({ title: msg('appShortName') })]);
 };
 
 export const updateBadge = async (state: UsageState): Promise<void> => {
@@ -183,7 +179,6 @@ export const updateBadge = async (state: UsageState): Promise<void> => {
 
   await Promise.all([
     setBarIcon(summary.percents),
-    chrome.action.setBadgeText({ text: '' }),
     chrome.action.setTitle({ title: summary.tooltip }),
   ]);
 };

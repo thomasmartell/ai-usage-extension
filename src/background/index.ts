@@ -1,6 +1,13 @@
-import { REFRESH_ALARM, REFRESH_INTERVAL_MINUTES } from '../shared/constants';
+import {
+  MAC_RUNNER_ALARM,
+  REFRESH_ALARM,
+  REFRESH_INTERVAL_MINUTES,
+  STORAGE_KEYS,
+} from '../shared/constants';
+import { readMacRunnerState, refreshMacRunner, type MacRunnerState } from '../shared/macRunner';
 import type { ExtensionMessage, MessageResponse, UsageState } from '../shared/types';
 import { updateBadge } from './badge';
+import { updateMacRunnerBadge } from './macRunnerBadge';
 import { createRefresher } from './refreshQueue';
 import { GithubService } from './services/GithubService';
 import { NetlifyService } from './services/NetlifyService';
@@ -35,8 +42,14 @@ void UsageService.getUsageState()
   .then((state) => (hasStartedRefresh ? undefined : queueBadgeUpdate(state)))
   .catch(() => undefined);
 
+void readMacRunnerState()
+  .then(updateMacRunnerBadge)
+  .catch(() => undefined);
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create(REFRESH_ALARM, { periodInMinutes: REFRESH_INTERVAL_MINUTES });
+  chrome.alarms.create(MAC_RUNNER_ALARM, { periodInMinutes: 1 });
+  void refreshMacRunner(false).catch(() => undefined);
   // Preferences left behind by the on-page overlays, which have been removed.
   void chrome.storage.local.remove(LEGACY_OVERLAY_KEYS);
   void refreshUsage().catch(() => undefined);
@@ -44,11 +57,25 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onStartup.addListener(() => {
   void refreshUsage().catch(() => undefined);
+  void refreshMacRunner(false).catch(() => undefined);
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === REFRESH_ALARM) {
     void refreshUsage().catch(() => undefined);
+  }
+  if (alarm.name === MAC_RUNNER_ALARM) {
+    void refreshMacRunner(false).catch(() => undefined);
+  }
+});
+
+// Every Mac runner snapshot, from this worker or the popup, drives the badge.
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  const change = changes[STORAGE_KEYS.macRunnerState];
+  if (areaName === 'local' && change) {
+    void updateMacRunnerBadge((change.newValue ?? null) as MacRunnerState | null).catch(
+      () => undefined,
+    );
   }
 });
 

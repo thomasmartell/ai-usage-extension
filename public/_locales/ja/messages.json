@@ -259,5 +259,59 @@
   },
   "sectionServices": {
     "message": "開発者サービス"
+  },
+  "macRunnerTitle": {
+    "message": "Mac runner"
+  },
+  "macRunnerOn": {
+    "message": "ON"
+  },
+  "macRunnerOff": {
+    "message": "OFF"
+  },
+  "macRunnerStarting": {
+    "message": "STARTING"
+  },
+  "macRunnerStopping": {
+    "message": "STOPPING"
+  },
+  "macRunnerStart": {
+    "message": "Start"
+  },
+  "macRunnerStop": {
+    "message": "Stop"
+  },
+  "macRunnerStopConfirm": {
+    "message": "Stop anyway?"
+  },
+  "macRunnerChecked": {
+    "message": "checked $1"
+  },
+  "macRunnerRunnerOff": {
+    "message": "offline"
+  },
+  "macRunnerRunnerConnecting": {
+    "message": "connecting…"
+  },
+  "macRunnerRunnerBusy": {
+    "message": "running a job"
+  },
+  "macRunnerRunnerIdle": {
+    "message": "idle"
+  },
+  "macRunnerNoJobs": {
+    "message": "No jobs on this Mac in the last 2 days."
+  },
+  "macRunnerHeartbeat": {
+    "message": "Heartbeat $1"
+  },
+  "macRunnerNoHeartbeat": {
+    "message": "No heartbeat yet"
+  },
+  "macRunnerRouting": {
+    "message": "MAC_RUNNER = $1"
+  },
+  "macRunnerNoRouting": {
+    "message": "routing not switched on"
   }
 }

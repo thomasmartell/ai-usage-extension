@@ -6,6 +6,7 @@ import { msg } from '../shared/i18n';
 import { useNow } from '../shared/hooks/useNow';
 import { GithubConnect } from './components/GithubConnect';
 import { Headline } from './components/Headline';
+import { MacRunnerCard } from './components/MacRunnerCard';
 import { NetlifyConnect } from './components/NetlifyConnect';
 import { ProviderCard } from './components/ProviderCard';
 import { useGithubAuth } from './hooks/useGithubAuth';
@@ -150,6 +151,7 @@ export const App = () => {
 
       {fullView ? (
         <div className="au-board">
+          <MacRunnerCard />
           <section className="au-section">
             <h3 className="au-section__title">{msg('sectionAssistants')}</h3>
             <div className="au-cards au-cards--pair">
@@ -167,6 +169,7 @@ export const App = () => {
         </div>
       ) : (
         <div className="au-cards">
+          <MacRunnerCard />
           {cards.claude}
           {cards.codex}
           {cards.github}
